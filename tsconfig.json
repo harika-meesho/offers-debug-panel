@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@pages/*": ["src/client/pages/*"],
+      "@store/*": ["src/client/store/*"],
+      "@services/*": ["src/client/services/*"],
+      "@components/*": ["src/client/components/*"],
+      "@theme/*": ["src/client/theme/*"]
+    }
+  },
+  "include": ["src/client", "vite.config.ts"],
+  "exclude": ["node_modules", "dist", "src/server"]
+}
