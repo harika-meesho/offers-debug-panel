@@ -1,11 +1,13 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import DebugPanel from '@pages/DebugPanel';
+import HomePage from '@pages/HomePage';
+import EventOffersPage from '@pages/EventOffersPage';
 
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/debug" replace />} />
-      <Route path="/debug/*" element={<DebugPanel />} />
+      <Route path="/" element={<HomePage />} />
+      <Route path="/event/:eventId" element={<EventOffersPage />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

@@ -12,13 +12,13 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "baseUrl": ".",
     "paths": {
-      "@pages/*": ["src/client/pages/*"],
-      "@store/*": ["src/client/store/*"],
-      "@services/*": ["src/client/services/*"],
-      "@components/*": ["src/client/components/*"],
-      "@theme/*": ["src/client/theme/*"]
+      "@pages/*":     ["./src/client/pages/*"],
+      "@store/*":     ["./src/client/store/*"],
+      "@services/*":  ["./src/client/services/*"],
+      "@components/*":["./src/client/components/*"],
+      "@theme/*":     ["./src/client/theme/*"],
+      "@utils/*":     ["./src/client/utils/*"]
     }
   },
   "include": ["src/client", "vite.config.ts"],
