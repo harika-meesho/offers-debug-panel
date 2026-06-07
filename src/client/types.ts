@@ -1,9 +1,11 @@
 export interface Timeslot {
   offer_id: string;
-  event_id: string;
+  event_id?: string;
+  optin_id?: string;
+  event_type: string;
+  event_name?: string;
   start_time: number;
   end_time: number;
-  optin_id?: string;
 }
 
 export type OfferStatus = 'ACTIVE' | 'CREATED' | 'DISABLED';
@@ -26,4 +28,17 @@ export interface OfferDetail {
 export interface ProductSupplierResponse {
   timeslots: Timeslot[];
   offer_details: Record<string, OfferDetail>;
+}
+
+export interface OptinEntry {
+  optinId: number;
+  eventId: number;
+  eventCategory: string;
+  eventName: string;
+  optinType: string;
+  optinStartDate: string;
+  optinEndDate: string;
+  optinStatus: string;
+  parentOptinId: number;
+  minDiscount: number;
 }

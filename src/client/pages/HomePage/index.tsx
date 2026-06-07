@@ -31,6 +31,8 @@ import { Timeslot } from '../../types';
 
 interface EventGroup {
   eventId: string;
+  eventType: string;
+  eventName: string;
   timeslots: Timeslot[];
 }
 
@@ -38,13 +40,27 @@ interface EventGroup {
 
 function groupByEvent(timeslots: Timeslot[]): EventGroup[] {
   const map = timeslots.reduce<Record<string, Timeslot[]>>((acc, ts) => {
-    (acc[ts.event_id] ??= []).push(ts);
+    const key = ts.event_id ?? 'unknown';
+    (acc[key] ??= []).push(ts);
     return acc;
   }, {});
-  return Object.entries(map).map(([eventId, ts]) => ({ eventId, timeslots: ts }));
+  return Object.entries(map).map(([eventId, ts]) => ({
+    eventId,
+    eventType: ts[0].event_type ?? 'unknown',
+    eventName: ts[0].event_name ?? '',
+    timeslots: ts,
+  }));
 }
 
-// ─── components ──────────────────────────────────────────────────────────────
+// ─── TypeChip ────────────────────────────────────────────────────────────────
+
+function TypeChip({ eventType }: { eventType: string }) {
+  if (eventType === 'optin') return <Chip label="Optin" size="small" color="secondary" />;
+  if (eventType === 'direct') return <Chip label="Direct" size="small" color="info" />;
+  return <Chip label="Unknown" size="small" />;
+}
+
+// ─── EventsTable ─────────────────────────────────────────────────────────────
 
 function EventsTable({ timeslots }: { timeslots: Timeslot[] }) {
   const navigate = useNavigate();
@@ -70,7 +86,7 @@ function EventsTable({ timeslots }: { timeslots: Timeslot[] }) {
         <Table>
           <TableHead>
             <TableRow sx={{ bgcolor: 'grey.50' }}>
-              {['ID', 'Event ID', '# Offers', 'Offer IDs', 'Actions'].map((col) => (
+              {['ID', 'Event ID', 'Type', 'Event Name', '# Offers', 'Offer IDs', 'Actions'].map((col) => (
                 <TableCell
                   key={col}
                   sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
@@ -99,6 +115,12 @@ function EventsTable({ timeslots }: { timeslots: Timeslot[] }) {
                   >
                     {group.eventId}
                   </Typography>
+                </TableCell>
+                <TableCell sx={{ minWidth: 80 }}>
+                  <TypeChip eventType={group.eventType} />
+                </TableCell>
+                <TableCell sx={{ fontSize: '0.85rem', color: 'text.primary', minWidth: 140 }}>
+                  {group.eventName || '—'}
                 </TableCell>
                 <TableCell>
                   <Chip label={group.timeslots.length} size="small" variant="outlined" sx={{ fontWeight: 700 }} />
@@ -160,6 +182,7 @@ export default function HomePage() {
     dispatch(setLoading(true));
     dispatch(setError(null));
     dispatch(setData(null));
+
     try {
       const result = await getProductSupplierOffers(trimmedPid, trimmedSid);
       dispatch(setData(result));
