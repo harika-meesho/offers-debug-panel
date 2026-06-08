@@ -28,6 +28,8 @@ export interface EventGroup {
   event_type: string;
   event_name: string;
   offer_ids: string[];
+  start_time: number;
+  end_time: number;
   timeslots: TimeslotWithDetail[];
 }
 

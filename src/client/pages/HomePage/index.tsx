@@ -26,6 +26,7 @@ import { RootState } from '@store/index';
 import { setLoading, setError, setPid, setSid, setData } from '@store/debugPanelSlice';
 import { getProductSupplierOffers } from '@services/api';
 import { EventGroup, ProductDetails } from '../../types';
+import { formatTime } from '../../utils/format';
 
 // ─── ProductCard ─────────────────────────────────────────────────────────────
 
@@ -108,7 +109,7 @@ function EventsTable({ groups }: { groups: EventGroup[] }) {
         <Table>
           <TableHead>
             <TableRow sx={{ bgcolor: 'grey.50' }}>
-              {['ID', 'Event ID', 'Type', 'Event Name', '# Offers', 'Offer IDs', 'Actions'].map((col) => (
+              {['ID', 'Event ID', 'Type', 'Event Name', '# Offers', 'Start Time', 'End Time', 'Actions'].map((col) => (
                 <TableCell
                   key={col}
                   sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
@@ -147,18 +148,11 @@ function EventsTable({ groups }: { groups: EventGroup[] }) {
                 <TableCell>
                   <Chip label={group.timeslots.length} size="small" variant="outlined" sx={{ fontWeight: 700 }} />
                 </TableCell>
-                <TableCell
-                  sx={{
-                    fontFamily: 'monospace',
-                    fontSize: '0.78rem',
-                    color: 'text.secondary',
-                    maxWidth: 500,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {group.offer_ids.join(', ')}
+                <TableCell sx={{ whiteSpace: 'nowrap', fontSize: '0.82rem' }}>
+                  {formatTime(group.start_time)}
+                </TableCell>
+                <TableCell sx={{ whiteSpace: 'nowrap', fontSize: '0.82rem' }}>
+                  {formatTime(group.end_time)}
                 </TableCell>
                 <TableCell>
                   <Typography
