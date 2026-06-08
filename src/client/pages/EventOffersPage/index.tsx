@@ -19,7 +19,6 @@ import AppHeader from '@components/AppHeader';
 import StatusChip from '@components/StatusChip';
 import { formatTime } from '../../utils/format';
 import { RootState } from '@store/index';
-import { OfferDetail } from '../../types';
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -77,8 +76,8 @@ export default function EventOffersPage() {
     );
   }
 
-  const timeslots = data.timeslots.filter((t) => t.event_id === eventId);
-  const offerDetails: Record<string, OfferDetail> = data.offer_details;
+  const event = data.events.find((e) => e.event_id === eventId);
+  const timeslots = event?.timeslots ?? [];
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#F5F5F5' }}>
@@ -131,7 +130,7 @@ export default function EventOffersPage() {
             </TableHead>
             <TableBody>
               {timeslots.map((ts, i) => {
-                const d = offerDetails[ts.offer_id];
+                const d = ts.offer_detail;
                 return (
                   <TableRow key={ts.offer_id} hover>
                     <TableCell sx={{ color: 'text.secondary', fontSize: '0.85rem', width: 36 }}>
@@ -159,7 +158,7 @@ export default function EventOffersPage() {
                     <TableCell sx={{ fontSize: '0.82rem' }}>{d?.created_by || '—'}</TableCell>
                     <TableCell sx={{ fontSize: '0.82rem' }}>
                       {d?.disabled_by
-                        ? <DisabledByCell disabledBy={d.disabled_by} reason={d.disabled_reason} />
+                        ? <DisabledByCell disabledBy={d.disabled_by!} reason={d.disabled_reason ?? ''} />
                         : '—'}
                     </TableCell>
                   </TableRow>
