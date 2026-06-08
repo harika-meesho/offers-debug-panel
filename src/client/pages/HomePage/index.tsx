@@ -109,7 +109,7 @@ function EventsTable({ groups }: { groups: EventGroup[] }) {
         <Table>
           <TableHead>
             <TableRow sx={{ bgcolor: 'grey.50' }}>
-              {['ID', 'Event ID', 'Type', 'Event Name', '# Offers', 'Start Time', 'End Time', 'Actions'].map((col) => (
+              {['ID', 'Event ID', 'Type', 'Event Name', 'Event Category', '# Offers', 'Start Time', 'End Time', 'Actions'].map((col) => (
                 <TableCell
                   key={col}
                   sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
@@ -144,6 +144,9 @@ function EventsTable({ groups }: { groups: EventGroup[] }) {
                 </TableCell>
                 <TableCell sx={{ fontSize: '0.85rem', color: 'text.primary', minWidth: 140 }}>
                   {group.event_name || '—'}
+                </TableCell>
+                <TableCell sx={{ fontSize: '0.85rem', color: 'text.secondary', minWidth: 120 }}>
+                  {group.event_category || '—'}
                 </TableCell>
                 <TableCell>
                   <Chip label={group.timeslots.length} size="small" variant="outlined" sx={{ fontWeight: 700 }} />

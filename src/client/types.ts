@@ -27,6 +27,7 @@ export interface EventGroup {
   event_id: string;
   event_type: string;
   event_name: string;
+  event_category: string;
   offer_ids: string[];
   start_time: number;
   end_time: number;
