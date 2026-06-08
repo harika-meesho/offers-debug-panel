@@ -21,6 +21,7 @@ import StatusChip from '@components/StatusChip';
 import { formatTime } from '../../utils/format';
 import { RootState } from '@store/index';
 import { TimeslotWithDetail } from '../../types';
+import LifecycleSection from './LifecycleSection';
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -262,6 +263,8 @@ export default function OverlappingOffersPage() {
     allTimeslots.find((ts) => ts.offer_id === offerId && ts.event_id === eventId) ??
     allTimeslots.find((ts) => ts.offer_id === offerId);
 
+  const selectedEvent = data.events.find((e) => e.event_id === eventId);
+
   if (!selectedTs) {
     return (
       <Box sx={{ minHeight: '100vh', bgcolor: '#F5F5F5' }}>
@@ -367,7 +370,7 @@ export default function OverlappingOffersPage() {
 
         {/* ── Overlapping offers table ── */}
         {overlappingOffers.length === 0 ? (
-          <Alert severity="success">
+          <Alert severity="success" sx={{ mb: 0 }}>
             No other offers overlap with this offer's time window.
           </Alert>
         ) : (
@@ -480,6 +483,18 @@ export default function OverlappingOffersPage() {
               </Table>
             </TableContainer>
           </Paper>
+        )}
+        {/* ── Lifecycle section ── */}
+        {selectedEvent && (
+          <LifecycleSection
+            eventType={selectedEvent.event_type}
+            optinWindow={selectedEvent.optin_window}
+            optinId={selectedTs?.optin_id ?? undefined}
+            supplierId={sid}
+            offerDetail={selectedTs?.offer_detail}
+            slotStartTime={selectedTs.start_time}
+            slotEndTime={selectedTs.end_time}
+          />
         )}
       </Container>
     </Box>
