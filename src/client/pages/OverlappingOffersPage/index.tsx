@@ -31,6 +31,8 @@ interface EnrichedTimeslot extends TimeslotWithDetail {
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
+const SELECTED_COLOR = '#1976d2';
+
 const EVENT_PALETTE = [
   '#4CAF50', '#FF9800', '#9C27B0', '#00BCD4',
   '#F44336', '#795548', '#607D8B', '#E91E63',
@@ -46,48 +48,31 @@ function toLeftPct(t: number, min: number, span: number) {
   return span === 0 ? 0 : ((t - min) / span) * 100;
 }
 
-// ─── inline timeline (shown in table cell) ────────────────────────────────────
 
-function InlineTimeline({
-  selected,
+// ─── single bar (shown in each row's Time Window cell) ────────────────────────
+
+function SingleBar({
   offer,
   color,
+  globalMin,
+  globalSpan,
 }: {
-  selected: EnrichedTimeslot;
   offer: EnrichedTimeslot;
   color: string;
+  globalMin: number;
+  globalSpan: number;
 }) {
-  const timeMin = Math.min(selected.start_time, offer.start_time);
-  const timeMax = Math.max(selected.end_time, offer.end_time);
-  const span = timeMax - timeMin;
-
-  function barStyle(ts: EnrichedTimeslot) {
-    const left = toLeftPct(ts.start_time, timeMin, span);
-    const width = Math.max(toLeftPct(ts.end_time, timeMin, span) - left, 2);
-    return { left: `${left}%`, width: `${width}%` };
-  }
-
+  const left = toLeftPct(offer.start_time, globalMin, globalSpan);
+  const width = Math.max(toLeftPct(offer.end_time, globalMin, globalSpan) - left, 2);
   return (
-    <Box sx={{ width: 180, py: 0.25 }}>
-      {/* Selected offer bar */}
-      <Box sx={{ position: 'relative', height: 8, mb: 0.75 }}>
-        <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'grey.100', borderRadius: 0.5 }} />
-        <Box
-          sx={{
-            position: 'absolute', top: 0, bottom: 0, borderRadius: 0.5,
-            bgcolor: '#1976d2',
-            ...barStyle(selected),
-          }}
-        />
-      </Box>
-      {/* This offer's bar */}
-      <Box sx={{ position: 'relative', height: 8 }}>
-        <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'grey.100', borderRadius: 0.5 }} />
+    <Box sx={{ width: 180, cursor: 'help' }}>
+      <Box sx={{ position: 'relative', height: 8, bgcolor: 'grey.100', borderRadius: 0.5 }}>
         <Box
           sx={{
             position: 'absolute', top: 0, bottom: 0, borderRadius: 0.5,
             bgcolor: color,
-            ...barStyle(offer),
+            left: `${left}%`,
+            width: `${width}%`,
           }}
         />
       </Box>
@@ -95,7 +80,7 @@ function InlineTimeline({
   );
 }
 
-// ─── mini timeline (shown in tooltip on row hover) ────────────────────────────
+// ─── mini timeline (shown in tooltip on bar hover) ────────────────────────────
 
 function MiniTimeline({
   selected,
@@ -117,7 +102,6 @@ function MiniTimeline({
     const width = toLeftPct(ts.end_time, timeMin, span) - left;
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.75 }}>
-        {/* Label */}
         <Box sx={{ width: 110, flexShrink: 0, pr: 1 }}>
           <Typography
             variant="caption"
@@ -129,7 +113,6 @@ function MiniTimeline({
             {bold ? '▶ ' : ''}{label}
           </Typography>
         </Box>
-        {/* Track + bar */}
         <Box sx={{ flex: 1, position: 'relative', height: BAR_H }}>
           <Box sx={{ position: 'absolute', inset: '30% 0', bgcolor: 'grey.100', borderRadius: 0.5 }} />
           <Box
@@ -155,7 +138,7 @@ function MiniTimeline({
         Overlap Timeline
       </Typography>
 
-      {bar(selected, '#1976d2', 'Selected', true)}
+      {bar(selected, SELECTED_COLOR, 'Selected', true)}
       {bar(offer, color, offer.offer_id.slice(-10), false)}
 
       {/* Time axis */}
@@ -174,7 +157,6 @@ function MiniTimeline({
 
       <Divider sx={{ my: 1.25 }} />
 
-      {/* Overlap window detail */}
       <Box sx={{ display: 'flex', gap: 3 }}>
         <Box>
           <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">Selected window</Typography>
@@ -255,7 +237,6 @@ export default function OverlappingOffersPage() {
   const { eventId, offerId } = useParams<{ eventId: string; offerId: string }>();
   const navigate = useNavigate();
 
-  // All data already in Redux — no API call
   const { data, pid, sid } = useSelector((state: RootState) => state.debugPanel);
 
   if (!data) {
@@ -292,14 +273,16 @@ export default function OverlappingOffersPage() {
     );
   }
 
-  const overlappingOffers = allTimeslots.filter(
-    (ts) =>
-      ts.offer_id !== selectedTs.offer_id &&
-      ts.start_time < selectedTs.end_time &&
-      ts.end_time > selectedTs.start_time
-  );
+  const overlappingOffers = allTimeslots
+    .filter(
+      (ts) =>
+        ts.offer_id !== selectedTs.offer_id &&
+        ts.start_time < selectedTs.end_time &&
+        ts.end_time > selectedTs.start_time
+    )
+    .sort((a, b) => a.event_id.localeCompare(b.event_id));
 
-  // Assign a stable color per event
+  // Stable color per event from palette
   const eventColorMap = new Map<string, string>();
   let colorIdx = 0;
   for (const ts of overlappingOffers) {
@@ -307,6 +290,35 @@ export default function OverlappingOffersPage() {
       eventColorMap.set(ts.event_id, EVENT_PALETTE[colorIdx++ % EVENT_PALETTE.length]);
     }
   }
+
+  // Global time bounds — all bars share the same scale
+  const globalMin = overlappingOffers.reduce(
+    (m, ts) => Math.min(m, ts.start_time),
+    selectedTs.start_time
+  );
+  const globalMax = overlappingOffers.reduce(
+    (m, ts) => Math.max(m, ts.end_time),
+    selectedTs.end_time
+  );
+  const globalSpan = globalMax - globalMin;
+
+  const tooltipSlotProps = {
+    tooltip: {
+      sx: {
+        bgcolor: 'white',
+        color: 'text.primary',
+        boxShadow: 6,
+        border: '1px solid',
+        borderColor: 'divider',
+        p: 0,
+        maxWidth: 420,
+        '& .MuiTooltip-arrow': {
+          color: 'white',
+          '&::before': { border: '1px solid', borderColor: 'divider' },
+        },
+      },
+    },
+  };
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#F5F5F5' }}>
@@ -360,10 +372,11 @@ export default function OverlappingOffersPage() {
           </Alert>
         ) : (
           <Paper variant="outlined" sx={{ bgcolor: 'white', overflow: 'hidden' }}>
+            {/* Section header */}
             <Box sx={{ px: 3, py: 1.75, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1.5 }}>
               <Typography fontWeight={700} fontSize="0.95rem">Overlapping Offers</Typography>
               <Typography variant="caption" color="text.secondary">
-                — hover a row to see the overlap timeline
+                — hover the Time Window bar to see the overlap timeline
               </Typography>
             </Box>
 
@@ -382,64 +395,85 @@ export default function OverlappingOffersPage() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
+                  {/* ── Row 0: selected offer ── */}
+                  {(() => {
+                    const d = selectedTs.offer_detail;
+                    return (
+                      <TableRow sx={{ bgcolor: '#EEF4FB', borderLeft: `3px solid ${SELECTED_COLOR}` }}>
+                        <TableCell sx={{ fontSize: '0.75rem', width: 36 }}>
+                          <Chip label="→" size="small" color="primary" sx={{ height: 18, fontSize: '0.7rem', fontWeight: 700 }} />
+                        </TableCell>
+                        <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.78rem', maxWidth: 260, wordBreak: 'break-all', fontWeight: 700 }}>
+                          {selectedTs.offer_id}
+                        </TableCell>
+                        <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.78rem' }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: SELECTED_COLOR, flexShrink: 0 }} />
+                            {selectedTs.event_id}
+                          </Box>
+                        </TableCell>
+                        <TableCell sx={{ fontSize: '0.82rem' }}>{selectedTs.event_name || '—'}</TableCell>
+                        <TableCell sx={{ minWidth: 200 }}>
+                          <SingleBar
+                            offer={selectedTs}
+                            color={SELECTED_COLOR}
+                            globalMin={globalMin}
+                            globalSpan={globalSpan}
+                          />
+                        </TableCell>
+                        <TableCell><StatusChip status={d?.status} /></TableCell>
+                        <TableCell sx={{ fontSize: '0.82rem' }}>{d?.name || '—'}</TableCell>
+                        <TableCell sx={{ fontSize: '0.82rem' }}>{d?.funding_type || '—'}</TableCell>
+                      </TableRow>
+                    );
+                  })()}
+
+                  {/* ── Overlapping offer rows ── */}
                   {overlappingOffers.map((ts, i) => {
                     const d = ts.offer_detail;
                     const color = eventColorMap.get(ts.event_id) ?? '#90A4AE';
                     return (
-                      <Tooltip
+                      <TableRow
                         key={`${ts.offer_id}|${ts.event_id}|${ts.start_time}`}
-                        title={<MiniTimeline selected={selectedTs} offer={ts} color={color} />}
-                        placement="left"
-                        arrow
-                        slotProps={{
-                          tooltip: {
-                            sx: {
-                              bgcolor: 'white',
-                              color: 'text.primary',
-                              boxShadow: 6,
-                              border: '1px solid',
-                              borderColor: 'divider',
-                              p: 0,
-                              maxWidth: 420,
-                              '& .MuiTooltip-arrow': {
-                                color: 'white',
-                                '&::before': { border: '1px solid', borderColor: 'divider' },
-                              },
-                            },
-                          },
-                        }}
+                        hover
+                        sx={{ cursor: 'default' }}
                       >
-                        <TableRow
-                          hover
-                          sx={{
-                            cursor: 'default',
-                            borderLeft: `3px solid ${color}`,
-                            '&:hover': { bgcolor: `${color}10` },
-                          }}
-                        >
-                          <TableCell sx={{ color: 'text.secondary', fontSize: '0.85rem', width: 36 }}>
-                            {i + 1}
-                          </TableCell>
-                          <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.78rem', maxWidth: 260, wordBreak: 'break-all' }}>
-                            {ts.offer_id}
-                          </TableCell>
-                          <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.78rem' }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                              <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color, flexShrink: 0 }} />
-                              {ts.event_id}
+                        <TableCell sx={{ color: 'text.secondary', fontSize: '0.85rem', width: 36 }}>
+                          {i + 1}
+                        </TableCell>
+                        <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.78rem', maxWidth: 260, wordBreak: 'break-all' }}>
+                          {ts.offer_id}
+                        </TableCell>
+                        <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.78rem' }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color, flexShrink: 0 }} />
+                            {ts.event_id}
+                          </Box>
+                        </TableCell>
+                        <TableCell sx={{ fontSize: '0.82rem' }}>{ts.event_name || '—'}</TableCell>
+                        <TableCell sx={{ minWidth: 200 }}>
+                          <Tooltip
+                            title={<MiniTimeline selected={selectedTs} offer={ts} color={color} />}
+                            placement="left"
+                            arrow
+                            slotProps={tooltipSlotProps}
+                          >
+                            <Box sx={{ display: 'inline-block' }}>
+                              <SingleBar
+                                offer={ts}
+                                color={color}
+                                globalMin={globalMin}
+                                globalSpan={globalSpan}
+                              />
                             </Box>
-                          </TableCell>
-                          <TableCell sx={{ fontSize: '0.82rem' }}>{ts.event_name || '—'}</TableCell>
-                          <TableCell sx={{ minWidth: 200 }}>
-                            <InlineTimeline selected={selectedTs} offer={ts} color={color} />
-                          </TableCell>
-                          <TableCell>
-                            <StatusChip status={d?.status} />
-                          </TableCell>
-                          <TableCell sx={{ fontSize: '0.82rem' }}>{d?.name || '—'}</TableCell>
-                          <TableCell sx={{ fontSize: '0.82rem' }}>{d?.funding_type || '—'}</TableCell>
-                        </TableRow>
-                      </Tooltip>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell>
+                          <StatusChip status={d?.status} />
+                        </TableCell>
+                        <TableCell sx={{ fontSize: '0.82rem' }}>{d?.name || '—'}</TableCell>
+                        <TableCell sx={{ fontSize: '0.82rem' }}>{d?.funding_type || '—'}</TableCell>
+                      </TableRow>
                     );
                   })}
                 </TableBody>
