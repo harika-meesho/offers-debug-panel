@@ -25,7 +25,55 @@ import AppHeader from '@components/AppHeader';
 import { RootState } from '@store/index';
 import { setLoading, setError, setPid, setSid, setData } from '@store/debugPanelSlice';
 import { getProductSupplierOffers } from '@services/api';
-import { EventGroup } from '../../types';
+import { EventGroup, ProductDetails } from '../../types';
+
+// ─── ProductCard ─────────────────────────────────────────────────────────────
+
+function ProductCard({ product }: { product: ProductDetails }) {
+  return (
+    <Card variant="outlined" sx={{ mb: 3, bgcolor: 'white' }}>
+      <CardContent>
+        <Typography variant="subtitle1" fontWeight={700} gutterBottom>
+          Product Details
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 3, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          {product.image_url && (
+            <Box
+              component="img"
+              src={product.image_url}
+              alt={product.name}
+              sx={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 1, border: '1px solid', borderColor: 'divider', flexShrink: 0 }}
+            />
+          )}
+          <Box sx={{ flex: 1, minWidth: 200 }}>
+            <Typography variant="h6" fontWeight={700} gutterBottom>
+              {product.name || '—'}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
+              <Chip label={`Catalog ID: ${product.catalog_id}`} size="small" variant="outlined" />
+              {product.category_name && (
+                <Chip label={product.category_name} size="small" color="secondary" variant="outlined" />
+              )}
+              {product.sku && (
+                <Chip label={`SKU: ${product.sku}`} size="small" variant="outlined" />
+              )}
+              <Chip
+                label={product.valid_for_supplier ? 'Valid for Supplier' : 'Not Valid for Supplier'}
+                size="small"
+                color={product.valid_for_supplier ? 'success' : 'error'}
+              />
+            </Box>
+            {product.description && (
+              <Typography variant="body2" color="text.secondary">
+                {product.description}
+              </Typography>
+            )}
+          </Box>
+        </Box>
+      </CardContent>
+    </Card>
+  );
+}
 
 // ─── TypeChip ────────────────────────────────────────────────────────────────
 
@@ -182,6 +230,7 @@ export default function HomePage() {
 
   const hasResults = data !== null;
   const isEmpty = hasResults && data!.events.length === 0;
+  const productDetails = data?.product_details ?? null;
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#F5F5F5' }}>
@@ -235,6 +284,9 @@ export default function HomePage() {
             {error}
           </Alert>
         )}
+
+        {/* ── Product card ── */}
+        {productDetails && <ProductCard product={productDetails} />}
 
         {/* ── Empty state ── */}
         {isEmpty && (

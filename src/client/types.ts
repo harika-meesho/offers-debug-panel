@@ -31,7 +31,19 @@ export interface EventGroup {
   timeslots: TimeslotWithDetail[];
 }
 
+export interface ProductDetails {
+  id: number;
+  name: string;
+  image_url: string;
+  catalog_id: number;
+  category_name: string;
+  sku: string;
+  description: string;
+  valid_for_supplier: boolean;
+}
+
 export interface ProductSupplierResponse {
+  product_details?: ProductDetails;
   events: EventGroup[];
 }
 
