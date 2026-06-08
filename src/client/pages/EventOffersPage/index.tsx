@@ -146,6 +146,10 @@ export default function EventOffersPage() {
           </Box>
         </Box>
 
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Click any offer row to see all overlapping offers across events.
+        </Alert>
+
         {/* ── Timeslot accordions ── */}
         {timeGroups.map((group, gi) => (
           <Accordion
@@ -186,7 +190,12 @@ export default function EventOffersPage() {
                     {group.items.map((ts, i) => {
                       const d = ts.offer_detail;
                       return (
-                        <TableRow key={ts.offer_id} hover>
+                        <TableRow
+                          key={ts.offer_id}
+                          hover
+                          sx={{ cursor: 'pointer' }}
+                          onClick={() => navigate(`/event/${eventId}/offer/${ts.offer_id}/overlapping`)}
+                        >
                           <TableCell sx={{ color: 'text.secondary', fontSize: '0.85rem', width: 36 }}>
                             {i + 1}
                           </TableCell>
