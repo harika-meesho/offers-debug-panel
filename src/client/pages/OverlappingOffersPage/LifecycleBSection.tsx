@@ -8,71 +8,12 @@ import {
   Alert,
   Divider,
 } from '@mui/material';
-import type { LifecycleBResponse, OfferDetail, OfflineUploadSummary } from '../../types';
-import { getLifecycleB, getOfflineUploads } from '../../services/api';
+import type { OfferDetail, OfflineUploadSummary } from '../../types';
+import { getOfflineUploads } from '../../services/api';
 import { formatTime } from '../../utils/format';
-
-// ─── Meesho brand tokens ──────────────────────────────────────────────────────
-
-const M = {
-  purple:      '#6C3FC5',
-  purpleDeep:  '#5a33a8',
-  purpleLight: '#F0EAFB',
-  purpleMid:   '#9B7EE0',
-  purpleBorder:'#DDD0F0',
-  purpleFaint: '#EDE7F6',
-};
-
-// ─── step circle ──────────────────────────────────────────────────────────────
-
-type StepState = 'done' | 'warn' | 'error' | 'loading' | 'pending';
-
-function StepCircle({ n, state }: { n: number; state: StepState }) {
-  const base = {
-    width: 30, height: 30, borderRadius: '50%',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    flexShrink: 0, fontSize: '0.78rem', fontWeight: 700,
-  };
-  if (state === 'loading') {
-    return (
-      <Box sx={{ ...base, border: `2px solid ${M.purple}` }}>
-        <CircularProgress size={14} sx={{ color: M.purple }} />
-      </Box>
-    );
-  }
-  const cfg: Record<StepState, { bg: string; border: string; color: string }> = {
-    done:    { bg: M.purple,   border: M.purple,        color: '#fff'    },
-    error:   { bg: '#D32F2F',  border: '#D32F2F',       color: '#fff'    },
-    warn:    { bg: '#ED6C02',  border: '#ED6C02',       color: '#fff'    },
-    pending: { bg: M.purpleLight, border: M.purpleBorder, color: M.purpleMid },
-    loading: { bg: '#fff',     border: M.purple,        color: M.purple  },
-  };
-  const c = cfg[state];
-  return (
-    <Box sx={{ ...base, bgcolor: c.bg, border: `2px solid ${c.border}`, color: c.color }}>
-      {n}
-    </Box>
-  );
-}
-
-// ─── field ────────────────────────────────────────────────────────────────────
-
-function Field({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
-  return (
-    <Box sx={{ display: 'flex', gap: 1, mb: 0.5, alignItems: 'flex-start' }}>
-      <Typography
-        variant="caption"
-        fontWeight={600}
-        sx={{ width: 110, flexShrink: 0, color: '#7B6A9C' }}
-      >
-        {label}
-      </Typography>
-      <Typography variant="caption" fontFamily={mono ? 'monospace' : undefined} sx={{ wordBreak: 'break-all' }}>
-        {value ?? '—'}
-      </Typography>
-    </Box>
-  );
-}
+import { M, StepState, StepCircle } from '@components/StepCircle';
+import { apiError } from '@utils/apiError';
+import FieldRow from '@components/FieldRow';
 
 // ─── step 1: event details ────────────────────────────────────────────────────
 
@@ -84,11 +25,11 @@ function EventDetailsContent({
 }) {
   return (
     <Box>
-      <Field label="Event ID" value={eventId} mono />
-      <Field label="Event Type" value={eventType} />
-      {eventName && <Field label="Event Name" value={eventName} />}
-      {eventCategory && <Field label="Category" value={eventCategory} />}
-      <Field
+      <FieldRow border={false} label="Event ID" value={eventId} mono />
+      <FieldRow border={false} label="Event Type" value={eventType} />
+      {eventName && <FieldRow border={false} label="Event Name" value={eventName} />}
+      {eventCategory && <FieldRow border={false} label="Category" value={eventCategory} />}
+      <FieldRow border={false}
         label="Time Window"
         value={`${formatTime(slotStartTime)} → ${formatTime(slotEndTime)}`}
         mono
@@ -109,10 +50,10 @@ function OfflineUploadsContent({ uploads }: { uploads: OfflineUploadSummary[] })
   }
   return (
     <Box>
-      {uploads.map((u) => (
+      {uploads.map((u, i) => (
         <Box
           key={u.id}
-          sx={{ bgcolor: M.purpleLight, borderRadius: 1.5, p: 1.5, border: `1px solid ${M.purpleBorder}`, mb: 1 }}
+          sx={{ pb: 1.5, mb: 1.5, borderBottom: i < uploads.length - 1 ? `1px solid ${M.purpleFaint}` : 'none' }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
             <Chip
@@ -129,73 +70,10 @@ function OfflineUploadsContent({ uploads }: { uploads: OfflineUploadSummary[] })
               Upload #{u.id}
             </Typography>
           </Box>
-          {u.offerName && <Field label="Offer Name" value={u.offerName} />}
-          <Field label="Created By" value={u.createdBy || '—'} />
-          <Field label="Batches" value={`${u.completedBatches} / ${u.totalBatches} completed`} />
-        </Box>
-      ))}
-    </Box>
-  );
-}
-
-// ─── step 3: upload jobs ──────────────────────────────────────────────────────
-
-function JobsContent({ d }: { d: LifecycleBResponse['upload_jobs'] }) {
-  if (!d || !d.data || d.data.length === 0) {
-    return (
-      <Typography variant="caption" sx={{ color: M.purpleMid }}>
-        No upload jobs found for this event.
-      </Typography>
-    );
-  }
-  return (
-    <Box>
-      {d.data.map((job) => (
-        <Box
-          key={job.id}
-          sx={{
-            bgcolor: M.purpleLight, borderRadius: 1.5, p: 1.5,
-            border: `1px solid ${M.purpleBorder}`, mb: 1,
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-            <Chip
-              label={job.status}
-              size="small"
-              color={
-                job.status === 'COMPLETED' ? 'success'
-                : job.status === 'FAILED' || job.status === 'ERROR' ? 'error'
-                : 'warning'
-              }
-              sx={{ fontWeight: 700, fontSize: '0.72rem' }}
-            />
-            {job.job_type && (
-              <Typography variant="caption" sx={{ color: M.purpleMid }} fontFamily="monospace">
-                {job.job_type}
-              </Typography>
-            )}
-            <Typography variant="caption" sx={{ color: M.purpleMid }} fontFamily="monospace">
-              Job #{job.id}
-            </Typography>
-          </Box>
-          <Field label="Source Value" value={job.source_value} mono />
-          {job.batches && (
-            <Field label="Batches" value={`${job.batches.completed ?? '?'} / ${job.batches.total ?? '?'} completed`} />
-          )}
-          {job.progress_percentage != null && (
-            <Field label="Progress" value={`${job.progress_percentage}%`} />
-          )}
-          <Field label="Created" value={job.created_at} mono />
-          <Field label="Updated" value={job.updated_at} mono />
-          {job.error && job.error.length > 0 && (
-            <Box sx={{ mt: 1 }}>
-              {job.error.map((e, i) => (
-                <Alert key={i} severity="error" sx={{ py: 0.25, fontSize: '0.8rem' }}>
-                  [{e.type}] {e.message}
-                </Alert>
-              ))}
-            </Box>
-          )}
+          {u.offerName && <FieldRow border={false} label="Offer Name" value={u.offerName} />}
+          {u.offerDescription && <FieldRow border={false} label="Offer Desc" value={u.offerDescription} />}
+          <FieldRow border={false} label="Created By" value={u.createdBy || '—'} />
+          <FieldRow border={false} label="Batches" value={`${u.completedBatches} / ${u.totalBatches} completed`} />
         </Box>
       ))}
     </Box>
@@ -207,10 +85,10 @@ function JobsContent({ d }: { d: LifecycleBResponse['upload_jobs'] }) {
 type LiveLabel = 'LIVE' | 'UPCOMING' | 'EXPIRED' | 'NOT ACTIVATED' | 'DISABLED';
 
 function toSec(ts: number): number {
-  return ts > 1e10 ? Math.floor(ts / 1000) : ts;
+  return ts > 1e12 ? Math.floor(ts / 1000) : ts;
 }
 
-export function deriveLiveState(
+function deriveLiveState(
   d: OfferDetail,
   slotStart = 0,
   slotEnd = 0,
@@ -241,15 +119,15 @@ function OfferLiveContent({
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
         <Chip label={live.label} color={live.color} size="small" sx={{ fontWeight: 700, fontSize: '0.72rem' }} />
       </Box>
-      <Field label="Time Window" value={`${formatTime(startTime)} → ${formatTime(endTime)}`} mono />
-      {d.name && <Field label="Name" value={d.name} />}
-      {d.funding_type && <Field label="Funding Type" value={d.funding_type} />}
-      {d.created_by && <Field label="Created By" value={d.created_by} mono />}
+      <FieldRow border={false} label="Time Window" value={`${formatTime(startTime)} → ${formatTime(endTime)}`} mono />
+      {d.name && <FieldRow border={false} label="Name" value={d.name} />}
+      {d.funding_type && <FieldRow border={false} label="Funding Type" value={d.funding_type} />}
+      {d.created_by && <FieldRow border={false} label="Created By" value={d.created_by} mono />}
       {d.disabled_by && (
         <>
           <Divider sx={{ my: 1, borderColor: M.purpleFaint }} />
-          <Field label="Disabled By" value={d.disabled_by} mono />
-          {d.disabled_reason && <Field label="Disable Reason" value={d.disabled_reason} />}
+          <FieldRow border={false} label="Disabled By" value={d.disabled_by} mono />
+          {d.disabled_reason && <FieldRow border={false} label="Disable Reason" value={d.disabled_reason} />}
         </>
       )}
     </Box>
@@ -273,10 +151,6 @@ type StepDef = { index: number; title: string; state: StepState; content: React.
 export default function LifecycleBSection({
   eventId, eventType, eventName, eventCategory, slotStartTime, slotEndTime, offerDetail,
 }: Props) {
-  const [loading, setLoading] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-  const [lifecycle, setLifecycle] = useState<LifecycleBResponse | null>(null);
-
   const [uploadsLoading, setUploadsLoading] = useState(false);
   const [uploadsError, setUploadsError] = useState<string | null>(null);
   const [uploads, setUploads] = useState<OfflineUploadSummary[]>([]);
@@ -289,25 +163,9 @@ export default function LifecycleBSection({
       .then((resp) => { if (!cancelled) setUploads(resp.uploads); })
       .catch((e: unknown) => {
         if (cancelled) return;
-        const err = e as { response?: { data?: { error?: string; message?: string } }; message?: string };
-        setUploadsError(err?.response?.data?.error ?? err?.response?.data?.message ?? err?.message ?? 'Unknown error');
+        setUploadsError(apiError(e));
       })
       .finally(() => { if (!cancelled) setUploadsLoading(false); });
-    return () => { cancelled = true; };
-  }, [eventId]);
-
-  useEffect(() => {
-    if (!eventId || eventId === 'unknown') return;
-    let cancelled = false;
-    setLoading(true); setFetchError(null); setLifecycle(null);
-    getLifecycleB(eventId)
-      .then((resp) => { if (!cancelled) setLifecycle(resp); })
-      .catch((e: unknown) => {
-        if (cancelled) return;
-        const err = e as { response?: { data?: { error?: string; message?: string } }; message?: string };
-        setFetchError(err?.response?.data?.error ?? err?.response?.data?.message ?? err?.message ?? 'Unknown error');
-      })
-      .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [eventId]);
 
@@ -317,17 +175,6 @@ export default function LifecycleBSection({
     if (!uploads.length) return 'warn';
     return uploads.some((u) =>
       u.status === 'ERROR' || u.status === 'REJECTED' || u.status === 'DISABLED'
-    ) ? 'error' : 'done';
-  }
-
-  function jobsStepState(): StepState {
-    if (loading) return 'loading';
-    if (fetchError) return 'error';
-    if (!lifecycle) return 'pending';
-    if (lifecycle.upload_jobs_error) return 'error';
-    if (!lifecycle.upload_jobs?.data?.length) return 'warn';
-    return lifecycle.upload_jobs.data.some((j) =>
-      j.status === 'FAILED' || j.status === 'ERROR'
     ) ? 'error' : 'done';
   }
 
@@ -363,22 +210,7 @@ export default function LifecycleBSection({
       ),
     },
     {
-      index: 3, title: 'Upload Jobs', state: jobsStepState(),
-      content: !eventId || eventId === 'unknown' ? (
-        <Typography variant="caption" sx={{ color: M.purpleMid }}>No event ID — upload jobs unavailable.</Typography>
-      ) : (
-        <>
-          {loading && <CircularProgress size={18} sx={{ color: M.purple }} />}
-          {fetchError && <Alert severity="error" sx={{ py: 0.5 }}>{fetchError}</Alert>}
-          {lifecycle?.upload_jobs_error && (
-            <Alert severity="warning" sx={{ py: 0.5 }}>{lifecycle.upload_jobs_error}</Alert>
-          )}
-          {!loading && !fetchError && <JobsContent d={lifecycle?.upload_jobs} />}
-        </>
-      ),
-    },
-    {
-      index: 4, title: 'Offer Live State', state: offerStepState(),
+      index: 3, title: 'Offer Live State', state: offerStepState(),
       content: offerDetail ? (
         <OfferLiveContent d={offerDetail} slotStartTime={slotStartTime} slotEndTime={slotEndTime} />
       ) : (

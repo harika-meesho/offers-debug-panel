@@ -24,6 +24,7 @@ import {
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AppHeader from '@components/AppHeader';
+import { apiError } from '@utils/apiError';
 import { RootState } from '@store/index';
 import { setLoading, setError, setPid, setSid, setData } from '@store/debugPanelSlice';
 import { getProductSupplierOffers } from '@services/api';
@@ -288,16 +289,7 @@ export default function HomePage() {
       const result = await getProductSupplierOffers(trimmedPid, trimmedSid);
       dispatch(setData(result));
     } catch (err: unknown) {
-      const axiosErr = err as {
-        response?: { data?: { error?: string; message?: string } };
-        message?: string;
-      };
-      const msg =
-        axiosErr.response?.data?.error ??
-        axiosErr.response?.data?.message ??
-        axiosErr.message ??
-        'Failed to load events';
-      dispatch(setError(msg));
+      dispatch(setError(apiError(err)));
     } finally {
       dispatch(setLoading(false));
     }
@@ -308,7 +300,7 @@ export default function HomePage() {
   }
 
   const hasResults = data !== null;
-  const isEmpty = hasResults && data!.events.length === 0;
+  const isEmpty = hasResults && data?.events.length === 0;
   const productDetails = data?.product_details ?? null;
 
   return (
@@ -385,7 +377,7 @@ export default function HomePage() {
                 PID <strong>{pid}</strong> · SID <strong>{sid}</strong>
               </Typography>
             </Box>
-            <EventsTable groups={data!.events} />
+            <EventsTable groups={data?.events ?? []} />
           </Box>
         )}
       </Container>

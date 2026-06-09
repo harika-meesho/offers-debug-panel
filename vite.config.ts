@@ -26,6 +26,7 @@ export default defineConfig(({ mode }) => {
         '@store': resolve(__dirname, 'src/client/store'),
         '@services': resolve(__dirname, 'src/client/services'),
         '@components': resolve(__dirname, 'src/client/components'),
+        '@utils': resolve(__dirname, 'src/client/utils'),
         '@theme': resolve(__dirname, 'src/client/theme'),
       },
     },

@@ -51,18 +51,6 @@ export interface ProductSupplierResponse {
   events: EventGroup[];
 }
 
-export interface OptinEntry {
-  optinId: number;
-  eventId: number;
-  eventCategory: string;
-  eventName: string;
-  optinType: string;
-  optinStartDate: string;
-  optinEndDate: string;
-  optinStatus: string;
-  parentOptinId: number;
-  minDiscount: number;
-}
 
 // ─── Lifecycle A types ────────────────────────────────────────────────────────
 // These mirror the JSON fields that offer-platform-go's /offer-lifecycle endpoint returns.
@@ -96,6 +84,8 @@ export interface SupplierOptinDetails {
   id: number;
   name: string;
   opt_in_status: string;
+  context: string;        // maps to supplier_optin.flow_type — "INLINE" or "FILE"
+  supplier_optin_id: number;
   products: OptinDetailsProducts;
   opt_in_start_date: string;
   opt_in_end_date: string;
@@ -162,13 +152,6 @@ export interface LifecycleAResponse {
   upload_jobs_error?: string;
 }
 
-// Top-level response from GET /admin/debug/panel/offer-lifecycle-b (step 2 only).
-// Steps 1 (event details) and 3 (offer live state) come from already-loaded panel data.
-export interface LifecycleBResponse {
-  upload_jobs?: OfferJobsData;
-  upload_jobs_error?: string;
-}
-
 // ─── Lifecycle B types (offline upload / direct flow) ─────────────────────────
 
 export type OfflineUploadStatus = 'COMPLETED' | 'ERROR' | 'REJECTED' | 'DISABLED' | 'PENDING' | 'IN_PROGRESS' | 'APPROVED' | string;
@@ -177,6 +160,7 @@ export type JobStatus = 'COMPLETED' | 'ERROR' | 'IN_PROGRESS' | 'PENDING' | stri
 export interface OfflineUploadSummary {
   id: number;
   offerName: string;
+  offerDescription?: string;
   status: OfflineUploadStatus;
   createdBy: string;
   totalBatches: number;
@@ -198,11 +182,3 @@ export interface OfflineUploadDetail {
   completedAt?: string;
 }
 
-export interface OfferJobStatus {
-  id: number;
-  jobType: string;
-  status: JobStatus;
-  sourceValue: string;
-  batches: { total: number; completed: number };
-  errors: string[];
-}

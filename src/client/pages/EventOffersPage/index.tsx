@@ -169,6 +169,7 @@ export default function EventOffersPage() {
               >
                 <MenuItem value="">All</MenuItem>
                 <MenuItem value="ACTIVE">ACTIVE</MenuItem>
+                <MenuItem value="CREATED">CREATED</MenuItem>
                 <MenuItem value="DISABLED">DISABLED</MenuItem>
               </Select>
             </FormControl>
@@ -244,7 +245,7 @@ export default function EventOffersPage() {
                     const globalIdx = (page - 1) * PAGE_SIZE + i + 1;
                     return (
                       <TableRow
-                        key={ts.offer_id}
+                        key={`${ts.offer_id}|${ts.start_time}`}
                         hover
                         sx={{ cursor: 'pointer' }}
                         onClick={() => navigate(`/event/${eventId}/offer/${ts.offer_id}/overlapping`)}

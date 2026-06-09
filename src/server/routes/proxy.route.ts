@@ -17,6 +17,7 @@ const supplierOptinProxy = async (
       url,
       params: req.query,
       data: req.body,
+      timeout: 10_000,
       headers: {
         'Content-Type': 'application/json',
         ...(config.internalAuthToken
@@ -52,6 +53,7 @@ const offerPlatformProxy = async (
       url,
       params: req.query,
       data: req.body,
+      timeout: 10_000,
       headers,
     });
     res.status(response.status).json(response.data);

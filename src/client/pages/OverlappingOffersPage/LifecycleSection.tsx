@@ -19,21 +19,11 @@ import {
 import { getLifecycleA } from '../../services/api';
 import LifecycleBSection from './LifecycleBSection';
 import { formatTime } from '../../utils/format';
-
-const M = {
-  purple:      '#6C3FC5',
-  purpleLight: '#F0EAFB',
-  purpleMid:   '#9B7EE0',
-  purpleBorder:'#DDD0F0',
-  purpleFaint: '#EDE7F6',
-};
+import { M, StepState, StepCircle } from '@components/StepCircle';
+import { apiError } from '@utils/apiError';
+import FieldRow from '@components/FieldRow';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
-
-function apiError(e: unknown): string {
-  const err = e as { response?: { data?: { error?: string; message?: string } }; message?: string };
-  return err?.response?.data?.error ?? err?.response?.data?.message ?? err?.message ?? 'Unknown error';
-}
 
 function formatIsoDate(s: string | undefined | null): string {
   if (!s) return '—';
@@ -42,36 +32,6 @@ function formatIsoDate(s: string | undefined | null): string {
     day: '2-digit', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit', hour12: false,
   });
-}
-
-type StepState = 'done' | 'warn' | 'error' | 'loading' | 'pending';
-
-function StepCircle({ n, state }: { n: number; state: StepState }) {
-  const base = {
-    width: 30, height: 30, borderRadius: '50%',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    flexShrink: 0, fontSize: '0.78rem', fontWeight: 700,
-  };
-  if (state === 'loading') {
-    return (
-      <Box sx={{ ...base, border: `2px solid ${M.purple}` }}>
-        <CircularProgress size={14} sx={{ color: M.purple }} />
-      </Box>
-    );
-  }
-  const cfg: Record<StepState, { bg: string; border: string; color: string }> = {
-    done:    { bg: M.purple,       border: M.purple,        color: '#fff'      },
-    error:   { bg: '#D32F2F',      border: '#D32F2F',       color: '#fff'      },
-    warn:    { bg: '#ED6C02',      border: '#ED6C02',       color: '#fff'      },
-    pending: { bg: M.purpleLight,  border: M.purpleBorder,  color: M.purpleMid },
-    loading: { bg: '#fff',         border: M.purple,        color: M.purple    },
-  };
-  const c = cfg[state];
-  return (
-    <Box sx={{ ...base, bgcolor: c.bg, border: `2px solid ${c.border}`, color: c.color }}>
-      {n}
-    </Box>
-  );
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -90,31 +50,6 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        gap: 1,
-        py: 0.5,
-        alignItems: 'flex-start',
-        borderBottom: '1px solid',
-        borderColor: 'grey.100',
-        '&:last-child': { borderBottom: 'none' },
-      }}
-    >
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        fontWeight={600}
-        sx={{ minWidth: 110, flexShrink: 0 }}
-      >
-        {label}
-      </Typography>
-      <Box sx={{ flex: 1, minWidth: 0 }}>{children}</Box>
-    </Box>
-  );
-}
 
 function DiscountChips({ data }: { data: Record<string, unknown> | Record<string, number> }) {
   const entries = Object.entries(data);
@@ -173,7 +108,7 @@ function Step1Content({ d }: { d: OptinEntryData }) {
       </FieldRow>
       <FieldRow label="Status"><StatusBadge status={d.optin_status} /></FieldRow>
       <FieldRow label="Optin Type">
-        <Chip label={d.optin_type || '—'} size="small" color={d.optin_type === 'FILE' ? 'info' : 'default'} />
+        <Chip label={d.optin_type || '—'} size="small" />
       </FieldRow>
       <FieldRow label="Optin Window">
         <Typography variant="caption" fontFamily="monospace">
@@ -420,8 +355,9 @@ export default function LifecycleSection({
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [lifecycle, setLifecycle] = useState<LifecycleAResponse | null>(null);
 
-  const optinType = optinWindow?.optin_type;
-  const isFileFlow = optinType === 'FILE';
+  // isFileFlow is derived from the supplier's actual flow_type (context field in Step 2 response),
+  // not from optin_type (which is the optin category: ALL/SSCAT/SUPPLIER_PRODUCTS).
+  const isFileFlow = lifecycle?.supplier_optin?.context === 'FILE';
 
   useEffect(() => {
     if (eventType !== 'optin') return;
@@ -431,13 +367,13 @@ export default function LifecycleSection({
     setFetchError(null);
     setLifecycle(null);
 
-    getLifecycleA(optinId, supplierId, optinType)
+    getLifecycleA(optinId, supplierId)
       .then((resp) => { if (!cancelled) setLifecycle(resp); })
       .catch((e) => { if (!cancelled) setFetchError(apiError(e)); })
       .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
-  }, [optinId, supplierId, eventType, optinType]);
+  }, [optinId, supplierId, eventType, optinWindow?.optin_type]);
 
   if (eventType !== 'optin') {
     return (
@@ -547,7 +483,7 @@ export default function LifecycleSection({
             <Typography variant="caption" color="text.secondary">
               {isFileFlow
                 ? lifecycle?.file_upload_error ? undefined : 'No file upload data found.'
-                : 'Not applicable — optin type is not FILE.'}
+                : 'Not applicable — supplier flow type is INLINE.'}
             </Typography>
           </>
         )
