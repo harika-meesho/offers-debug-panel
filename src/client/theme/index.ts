@@ -2,7 +2,7 @@ import { createTheme } from '@mui/material/styles';
 
 export const theme = createTheme({
   palette: {
-    primary: { main: '#6C3FC5' },      // Meesho purple
+    primary: { main: '#9C27B0' },      // Meesho brand purple
     background: { default: '#F5F5F5' },
   },
   typography: {
@@ -21,8 +21,8 @@ export const theme = createTheme({
     MuiButton: {
       styleOverrides: {
         containedPrimary: {
-          backgroundColor: '#6C3FC5',
-          '&:hover': { backgroundColor: '#5a33a8' },
+          backgroundColor: '#9C27B0',
+          '&:hover': { backgroundColor: '#7B1FA2' },
         },
       },
     },

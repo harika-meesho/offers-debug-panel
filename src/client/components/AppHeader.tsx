@@ -1,28 +1,55 @@
 import { AppBar, Toolbar, Typography, Box, IconButton, Divider } from '@mui/material';
-import BugReportIcon from '@mui/icons-material/BugReport';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 interface Props {
-  onBack?: () => void; // when provided, shows a back arrow
+  onBack?: () => void;
 }
 
-/**
- * Shared top navigation bar used across all pages.
- * Pass `onBack` to show a back arrow (e.g. on detail pages).
- */
 export default function AppHeader({ onBack }: Props) {
   return (
     <AppBar position="static" elevation={0}>
-      <Toolbar>
+      <Toolbar sx={{ minHeight: 56 }}>
         {onBack && (
-          <IconButton onClick={onBack} sx={{ mr: 1 }}>
+          <IconButton onClick={onBack} sx={{ mr: 1, color: 'primary.main' }}>
             <ArrowBackIcon />
           </IconButton>
         )}
 
-        <BugReportIcon sx={{ mr: 1.5, fontSize: 26, color: 'primary.main' }} />
+        {/* Meesho logo mark — "m" in brand gradient pill */}
+        <Box
+          sx={{
+            width: 34,
+            height: 34,
+            borderRadius: '10px',
+            background: 'linear-gradient(135deg, #9C27B0 0%, #CE3AB7 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            mr: 1.25,
+            flexShrink: 0,
+          }}
+        >
+          <Typography
+            fontWeight={900}
+            color="white"
+            sx={{ fontSize: '1.15rem', lineHeight: 1, letterSpacing: -0.5 }}
+          >
+            m
+          </Typography>
+        </Box>
 
-        <Typography variant="h6" fontWeight={800} color="primary.main" sx={{ letterSpacing: 0.3 }}>
+        {/* Wordmark */}
+        <Typography
+          variant="h6"
+          sx={{
+            color: '#9C27B0',
+            fontFamily: '"Nunito", sans-serif',
+            fontWeight: 900,
+            fontStyle: 'italic',
+            letterSpacing: 0.5,
+            lineHeight: 1,
+          }}
+        >
           meesho
         </Typography>
 

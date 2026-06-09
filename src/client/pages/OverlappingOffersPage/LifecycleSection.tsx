@@ -35,6 +35,15 @@ function apiError(e: unknown): string {
   return err?.response?.data?.error ?? err?.response?.data?.message ?? err?.message ?? 'Unknown error';
 }
 
+function formatIsoDate(s: string | undefined | null): string {
+  if (!s) return '—';
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? s : d.toLocaleString('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  });
+}
+
 type StepState = 'done' | 'warn' | 'error' | 'loading' | 'pending';
 
 function StepCircle({ n, state }: { n: number; state: StepState }) {
@@ -98,7 +107,7 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
         variant="caption"
         color="text.secondary"
         fontWeight={600}
-        sx={{ minWidth: 130, flexShrink: 0 }}
+        sx={{ minWidth: 110, flexShrink: 0 }}
       >
         {label}
       </Typography>
@@ -110,12 +119,41 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
 function DiscountChips({ data }: { data: Record<string, unknown> | Record<string, number> }) {
   const entries = Object.entries(data);
   if (entries.length === 0) return <Typography variant="caption" color="text.secondary">—</Typography>;
+  const hasObjectValues = entries.some(([, v]) => typeof v === 'object' && v !== null);
+  if (hasObjectValues) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        {entries.map(([k, v]) => (
+          <Box key={k}>
+            <Chip
+              label={k}
+              size="small"
+              variant="outlined"
+              sx={{ fontFamily: 'monospace', fontSize: '0.7rem', mb: 0.5 }}
+            />
+            <Box sx={{ bgcolor: 'grey.50', px: 1, py: 0.75, borderRadius: 1 }}>
+              {typeof v === 'object' && v !== null ? (
+                Object.entries(v as Record<string, unknown>).map(([ik, iv]) => (
+                  <Typography key={ik} variant="caption" fontFamily="monospace" display="block" lineHeight={1.7}>
+                    <Box component="span" sx={{ color: 'text.secondary' }}>{ik}:</Box>
+                    {' '}{typeof iv === 'object' ? JSON.stringify(iv) : String(iv ?? '—')}
+                  </Typography>
+                ))
+              ) : (
+                <Typography variant="caption" fontFamily="monospace">{String(v)}</Typography>
+              )}
+            </Box>
+          </Box>
+        ))}
+      </Box>
+    );
+  }
   return (
     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
       {entries.map(([k, v]) => (
         <Chip
           key={k}
-          label={`${k}: ${typeof v === 'object' ? JSON.stringify(v) : String(v)}`}
+          label={`${k}: ${String(v)}`}
           size="small"
           variant="outlined"
           sx={{ fontFamily: 'monospace', fontSize: '0.72rem' }}
@@ -139,7 +177,7 @@ function Step1Content({ d }: { d: OptinEntryData }) {
       </FieldRow>
       <FieldRow label="Optin Window">
         <Typography variant="caption" fontFamily="monospace">
-          {d.optin_start_date} → {d.optin_end_date}
+          {formatIsoDate(d.optin_start_date)} → {formatIsoDate(d.optin_end_date)}
         </Typography>
       </FieldRow>
       {d.parent_optin_id !== 0 && (
@@ -200,7 +238,7 @@ function Step2Content({ d, supplierId }: { d: SupplierOptinDetails; supplierId: 
       {d.opt_in_start_date && (
         <FieldRow label="Optin Window">
           <Typography variant="caption" fontFamily="monospace">
-            {d.opt_in_start_date} → {d.opt_in_end_date}
+            {formatIsoDate(d.opt_in_start_date)} → {formatIsoDate(d.opt_in_end_date)}
           </Typography>
         </FieldRow>
       )}
@@ -344,19 +382,7 @@ function Step5Content({ d, startTime, endTime }: { d: OfferDetail; startTime: nu
       )}
       {d.discounts && Object.keys(d.discounts).length > 0 && (
         <FieldRow label="Discounts">
-          <Box
-            sx={{
-              fontFamily: 'monospace',
-              fontSize: '0.72rem',
-              bgcolor: 'grey.50',
-              p: 1,
-              borderRadius: 1,
-              maxHeight: 180,
-              overflow: 'auto',
-            }}
-          >
-            <pre style={{ margin: 0 }}>{JSON.stringify(d.discounts, null, 2)}</pre>
-          </Box>
+          <DiscountChips data={d.discounts} />
         </FieldRow>
       )}
     </Box>
@@ -636,7 +662,7 @@ export default function LifecycleSection({
             sx={{
               flex: 1,
               p: 2.5,
-              minWidth: 200,
+              minWidth: 260,
               borderRight: i < steps.length - 1 ? `1px solid ${M.purpleFaint}` : 'none',
             }}
           >
