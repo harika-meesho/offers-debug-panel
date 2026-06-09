@@ -666,7 +666,7 @@ export default function LifecycleSection({
               borderRight: i < steps.length - 1 ? `1px solid ${M.purpleFaint}` : 'none',
             }}
           >
-            {loading && !lifecycle && i > 0 && i < 4 ? (
+            {loading && !lifecycle && (i === 1 || i === 2 || i === 3) ? (
               <CircularProgress size={18} />
             ) : (
               step.content

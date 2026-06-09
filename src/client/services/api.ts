@@ -40,9 +40,18 @@ export async function getLifecycleB(eventId: string): Promise<LifecycleBResponse
 // ─── Lifecycle B API helpers ──────────────────────────────────────────────────
 
 type RawUpload = {
-  id: number; status: string; created_by: string;
-  offer?: { name?: string }; batches?: { total?: number; completed?: number };
-  result_file_key?: string; error?: { reason?: string };
+  id: number;
+  event_id?: number;
+  status: string;
+  created_by: string;
+  remarks?: string;
+  file_key?: string;
+  created_at?: string;
+  completed_at?: string;
+  offer?: { name?: string };
+  batches?: { total?: number; completed?: number };
+  result_file_key?: string;
+  error?: { reason?: string; file_key?: string };
 };
 
 type RawJob = {
@@ -60,10 +69,10 @@ export async function getOfflineUploads(eventId: string): Promise<{ uploads: Off
     uploads: items.map((u) => ({
       id: Number(u.id),
       offerName: u.offer?.name ?? '',
-      type: '',
       status: u.status,
       createdBy: u.created_by ?? '',
-      totalProducts: Number(u.batches?.total ?? 0),
+      totalBatches: Number(u.batches?.total ?? 0),
+      completedBatches: Number(u.batches?.completed ?? 0),
     })),
   };
 }
@@ -72,13 +81,17 @@ export async function getOfflineUploadDetail(id: number): Promise<OfflineUploadD
   const { data }: { data: RawUpload } = await client.get(`/admin/debug/panel/offers/upload/${id}`);
   return {
     id: Number(data.id),
-    type: '',
     status: data.status,
     createdBy: data.created_by ?? '',
-    totalProducts: 0,
+    remarks: data.remarks || undefined,
+    fileKey: data.file_key || undefined,
     totalBatches: Number(data.batches?.total ?? 0),
+    completedBatches: Number(data.batches?.completed ?? 0),
     resultFileKey: data.result_file_key || undefined,
     errorReason: data.error?.reason || undefined,
+    errorFileKey: data.error?.file_key || undefined,
+    createdAt: data.created_at || undefined,
+    completedAt: data.completed_at || undefined,
   };
 }
 

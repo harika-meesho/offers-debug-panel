@@ -177,22 +177,25 @@ export type JobStatus = 'COMPLETED' | 'ERROR' | 'IN_PROGRESS' | 'PENDING' | stri
 export interface OfflineUploadSummary {
   id: number;
   offerName: string;
-  type: string;
   status: OfflineUploadStatus;
   createdBy: string;
-  totalProducts: number;
+  totalBatches: number;
+  completedBatches: number;
 }
 
 export interface OfflineUploadDetail {
   id: number;
-  type: string;
   status: OfflineUploadStatus;
   createdBy: string;
-  reviewedBy?: string;
-  totalProducts: number;
+  remarks?: string;
+  fileKey?: string;
   totalBatches: number;
+  completedBatches: number;
   resultFileKey?: string;
   errorReason?: string;
+  errorFileKey?: string;
+  createdAt?: string;
+  completedAt?: string;
 }
 
 export interface OfferJobStatus {

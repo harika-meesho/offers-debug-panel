@@ -8,8 +8,8 @@ import {
   Alert,
   Divider,
 } from '@mui/material';
-import type { LifecycleBResponse, OfferDetail } from '../../types';
-import { getLifecycleB } from '../../services/api';
+import type { LifecycleBResponse, OfferDetail, OfflineUploadSummary } from '../../types';
+import { getLifecycleB, getOfflineUploads } from '../../services/api';
 import { formatTime } from '../../utils/format';
 
 // ─── Meesho brand tokens ──────────────────────────────────────────────────────
@@ -97,7 +97,48 @@ function EventDetailsContent({
   );
 }
 
-// ─── step 2: upload jobs ──────────────────────────────────────────────────────
+// ─── step 2: offline uploads ─────────────────────────────────────────────────
+
+function OfflineUploadsContent({ uploads }: { uploads: OfflineUploadSummary[] }) {
+  if (uploads.length === 0) {
+    return (
+      <Typography variant="caption" sx={{ color: M.purpleMid }}>
+        No offline uploads found for this event.
+      </Typography>
+    );
+  }
+  return (
+    <Box>
+      {uploads.map((u) => (
+        <Box
+          key={u.id}
+          sx={{ bgcolor: M.purpleLight, borderRadius: 1.5, p: 1.5, border: `1px solid ${M.purpleBorder}`, mb: 1 }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <Chip
+              label={u.status}
+              size="small"
+              color={
+                u.status === 'COMPLETED' ? 'success'
+                : u.status === 'ERROR' || u.status === 'REJECTED' || u.status === 'DISABLED' ? 'error'
+                : 'warning'
+              }
+              sx={{ fontWeight: 700, fontSize: '0.72rem' }}
+            />
+            <Typography variant="caption" sx={{ color: M.purpleMid }} fontFamily="monospace">
+              Upload #{u.id}
+            </Typography>
+          </Box>
+          {u.offerName && <Field label="Offer Name" value={u.offerName} />}
+          <Field label="Created By" value={u.createdBy || '—'} />
+          <Field label="Batches" value={`${u.completedBatches} / ${u.totalBatches} completed`} />
+        </Box>
+      ))}
+    </Box>
+  );
+}
+
+// ─── step 3: upload jobs ──────────────────────────────────────────────────────
 
 function JobsContent({ d }: { d: LifecycleBResponse['upload_jobs'] }) {
   if (!d || !d.data || d.data.length === 0) {
@@ -236,6 +277,25 @@ export default function LifecycleBSection({
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [lifecycle, setLifecycle] = useState<LifecycleBResponse | null>(null);
 
+  const [uploadsLoading, setUploadsLoading] = useState(false);
+  const [uploadsError, setUploadsError] = useState<string | null>(null);
+  const [uploads, setUploads] = useState<OfflineUploadSummary[]>([]);
+
+  useEffect(() => {
+    if (!eventId || eventId === 'unknown') return;
+    let cancelled = false;
+    setUploadsLoading(true); setUploadsError(null); setUploads([]);
+    getOfflineUploads(eventId)
+      .then((resp) => { if (!cancelled) setUploads(resp.uploads); })
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        const err = e as { response?: { data?: { error?: string; message?: string } }; message?: string };
+        setUploadsError(err?.response?.data?.error ?? err?.response?.data?.message ?? err?.message ?? 'Unknown error');
+      })
+      .finally(() => { if (!cancelled) setUploadsLoading(false); });
+    return () => { cancelled = true; };
+  }, [eventId]);
+
   useEffect(() => {
     if (!eventId || eventId === 'unknown') return;
     let cancelled = false;
@@ -251,11 +311,20 @@ export default function LifecycleBSection({
     return () => { cancelled = true; };
   }, [eventId]);
 
+  function uploadsStepState(): StepState {
+    if (uploadsLoading && uploads.length === 0) return 'loading';
+    if (uploadsError) return 'error';
+    if (!uploads.length) return 'warn';
+    return uploads.some((u) =>
+      u.status === 'ERROR' || u.status === 'REJECTED' || u.status === 'DISABLED'
+    ) ? 'error' : 'done';
+  }
+
   function jobsStepState(): StepState {
     if (loading) return 'loading';
     if (fetchError) return 'error';
     if (!lifecycle) return 'pending';
-    if (lifecycle.upload_jobs_error) return 'warn';
+    if (lifecycle.upload_jobs_error) return 'error';
     if (!lifecycle.upload_jobs?.data?.length) return 'warn';
     return lifecycle.upload_jobs.data.some((j) =>
       j.status === 'FAILED' || j.status === 'ERROR'
@@ -271,20 +340,30 @@ export default function LifecycleBSection({
     return 'pending';
   }
 
-  const step1: StepDef = {
-    index: 1, title: 'Event Details', state: 'done',
-    content: (
-      <EventDetailsContent
-        eventId={eventId} eventType={eventType} eventName={eventName}
-        eventCategory={eventCategory} slotStartTime={slotStartTime} slotEndTime={slotEndTime}
-      />
-    ),
-  };
-
   const steps: StepDef[] = [
-    step1,
     {
-      index: 2, title: 'Upload Jobs', state: jobsStepState(),
+      index: 1, title: 'Event Details', state: 'done',
+      content: (
+        <EventDetailsContent
+          eventId={eventId} eventType={eventType} eventName={eventName}
+          eventCategory={eventCategory} slotStartTime={slotStartTime} slotEndTime={slotEndTime}
+        />
+      ),
+    },
+    {
+      index: 2, title: 'Offline Uploads', state: uploadsStepState(),
+      content: !eventId || eventId === 'unknown' ? (
+        <Typography variant="caption" sx={{ color: M.purpleMid }}>No event ID — offline uploads unavailable.</Typography>
+      ) : (
+        <>
+          {uploadsLoading && uploads.length === 0 && <CircularProgress size={18} sx={{ color: M.purple }} />}
+          {uploadsError && <Alert severity="error" sx={{ py: 0.5 }}>{uploadsError}</Alert>}
+          {!uploadsLoading && !uploadsError && <OfflineUploadsContent uploads={uploads} />}
+        </>
+      ),
+    },
+    {
+      index: 3, title: 'Upload Jobs', state: jobsStepState(),
       content: !eventId || eventId === 'unknown' ? (
         <Typography variant="caption" sx={{ color: M.purpleMid }}>No event ID — upload jobs unavailable.</Typography>
       ) : (
@@ -299,7 +378,7 @@ export default function LifecycleBSection({
       ),
     },
     {
-      index: 3, title: 'Offer Live State', state: offerStepState(),
+      index: 4, title: 'Offer Live State', state: offerStepState(),
       content: offerDetail ? (
         <OfferLiveContent d={offerDetail} slotStartTime={slotStartTime} slotEndTime={slotEndTime} />
       ) : (
