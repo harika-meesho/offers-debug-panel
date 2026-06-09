@@ -4,7 +4,7 @@ import proxyRouter from './routes/proxy.route';
 
 const app = express();
 
-app.use(cors({ origin: 'http://localhost:3000' }));
+app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:3000' }));
 app.use(express.json());
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));

@@ -19,6 +19,8 @@ import {
   TableRow,
   Paper,
   Typography,
+  InputAdornment,
+  Pagination,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AppHeader from '@components/AppHeader';
@@ -86,23 +88,88 @@ function TypeChip({ eventType }: { eventType: string }) {
 
 // ─── EventsTable ─────────────────────────────────────────────────────────────
 
+const PAGE_SIZE = 20;
+type TypeFilter = 'all' | 'optin' | 'direct';
+
 function EventsTable({ groups }: { groups: EventGroup[] }) {
   const navigate = useNavigate();
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
+  const [page, setPage] = useState(1);
+
+  const totalOffers = groups.reduce((n, g) => n + g.timeslots.length, 0);
+
+  const filtered = groups.filter((g) => {
+    const matchType = typeFilter === 'all' || g.event_type === typeFilter;
+    const q = search.trim().toLowerCase();
+    const matchSearch =
+      !q ||
+      g.event_id.toLowerCase().includes(q) ||
+      (g.event_name ?? '').toLowerCase().includes(q);
+    return matchType && matchSearch;
+  });
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  function handleSearch(val: string) {
+    setSearch(val);
+    setPage(1);
+  }
+
+  function handleType(t: TypeFilter) {
+    setTypeFilter(t);
+    setPage(1);
+  }
+
+  const isFiltered = search.trim() !== '' || typeFilter !== 'all';
 
   return (
     <Box>
       {/* summary chips */}
       <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+        <Chip label={`${groups.length} Event${groups.length !== 1 ? 's' : ''}`} color="primary" size="small" />
         <Chip
-          label={`${groups.length} Event${groups.length !== 1 ? 's' : ''}`}
-          color="primary"
-          size="small"
-        />
-        <Chip
-          label={`${groups.reduce((n, g) => n + g.timeslots.length, 0)} Offer${groups.reduce((n, g) => n + g.timeslots.length, 0) !== 1 ? 's' : ''}`}
+          label={`${totalOffers} Offer${totalOffers !== 1 ? 's' : ''}`}
           variant="outlined"
           size="small"
         />
+      </Box>
+
+      {/* filter bar */}
+      <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+        <TextField
+          size="small"
+          placeholder="Search by event ID or name…"
+          value={search}
+          onChange={(e) => handleSearch(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon fontSize="small" sx={{ color: 'text.disabled' }} />
+              </InputAdornment>
+            ),
+          }}
+          sx={{ width: 280 }}
+        />
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          {(['all', 'optin', 'direct'] as TypeFilter[]).map((t) => (
+            <Chip
+              key={t}
+              label={t === 'all' ? 'All Types' : t.charAt(0).toUpperCase() + t.slice(1)}
+              onClick={() => handleType(t)}
+              color={typeFilter === t ? 'primary' : 'default'}
+              variant={typeFilter === t ? 'filled' : 'outlined'}
+              size="small"
+              sx={{ cursor: 'pointer' }}
+            />
+          ))}
+        </Box>
+        {isFiltered && (
+          <Typography variant="caption" color="text.secondary">
+            {filtered.length} of {groups.length} events
+          </Typography>
+        )}
       </Box>
 
       <TableContainer component={Paper} variant="outlined" sx={{ bgcolor: 'white' }}>
@@ -120,61 +187,76 @@ function EventsTable({ groups }: { groups: EventGroup[] }) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {groups.map((group, i) => (
-              <TableRow
-                key={group.event_id}
-                hover
-                sx={{ cursor: 'pointer' }}
-                onClick={() => navigate(`/event/${group.event_id}`)}
-              >
-                <TableCell sx={{ color: 'text.secondary', fontSize: '0.85rem', width: 40 }}>
-                  {i + 1}
-                </TableCell>
-                <TableCell>
-                  <Typography
-                    variant="body2"
-                    fontWeight={700}
-                    sx={{ fontFamily: 'monospace', fontSize: '0.9rem' }}
-                  >
-                    {group.event_id}
-                  </Typography>
-                </TableCell>
-                <TableCell sx={{ minWidth: 80 }}>
-                  <TypeChip eventType={group.event_type} />
-                </TableCell>
-                <TableCell sx={{ fontSize: '0.85rem', color: 'text.primary', minWidth: 140 }}>
-                  {group.event_name || '—'}
-                </TableCell>
-                <TableCell sx={{ fontSize: '0.85rem', color: 'text.secondary', minWidth: 120 }}>
-                  {group.event_category || '—'}
-                </TableCell>
-                <TableCell>
-                  <Chip label={group.timeslots.length} size="small" variant="outlined" sx={{ fontWeight: 700 }} />
-                </TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap', fontSize: '0.82rem' }}>
-                  {formatTime(group.start_time)}
-                </TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap', fontSize: '0.82rem' }}>
-                  {formatTime(group.end_time)}
-                </TableCell>
-                <TableCell>
-                  <Typography
-                    component="span"
-                    sx={{
-                      color: 'primary.main',
-                      fontWeight: 600,
-                      fontSize: '0.85rem',
-                      '&:hover': { textDecoration: 'underline' },
-                    }}
-                  >
-                    View/Debug Offers
-                  </Typography>
+            {paginated.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+                  No events match your search.
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              paginated.map((group, i) => (
+                <TableRow
+                  key={group.event_id}
+                  hover
+                  sx={{ cursor: 'pointer' }}
+                  onClick={() => navigate(`/event/${group.event_id}`)}
+                >
+                  <TableCell sx={{ color: 'text.secondary', fontSize: '0.85rem', width: 40 }}>
+                    {(page - 1) * PAGE_SIZE + i + 1}
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" fontWeight={700} sx={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>
+                      {group.event_id}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{ minWidth: 80 }}>
+                    <TypeChip eventType={group.event_type} />
+                  </TableCell>
+                  <TableCell sx={{ fontSize: '0.85rem', color: 'text.primary', minWidth: 140 }}>
+                    {group.event_name || '—'}
+                  </TableCell>
+                  <TableCell sx={{ fontSize: '0.85rem', color: 'text.secondary', minWidth: 120 }}>
+                    {group.event_category || '—'}
+                  </TableCell>
+                  <TableCell>
+                    <Chip label={group.timeslots.length} size="small" variant="outlined" sx={{ fontWeight: 700 }} />
+                  </TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap', fontSize: '0.82rem' }}>
+                    {formatTime(group.start_time)}
+                  </TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap', fontSize: '0.82rem' }}>
+                    {formatTime(group.end_time)}
+                  </TableCell>
+                  <TableCell>
+                    <Typography
+                      component="span"
+                      sx={{ color: 'primary.main', fontWeight: 600, fontSize: '0.85rem', '&:hover': { textDecoration: 'underline' } }}
+                    >
+                      View/Debug Offers
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </TableContainer>
+
+      {filtered.length > 0 && (
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+          <Typography variant="caption" color="text.secondary">
+            Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+          </Typography>
+          <Pagination
+            count={totalPages}
+            page={page}
+            onChange={(_, p) => setPage(p)}
+            color="primary"
+            size="small"
+            shape="rounded"
+          />
+        </Box>
+      )}
     </Box>
   );
 }

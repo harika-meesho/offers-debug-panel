@@ -6,7 +6,8 @@
     "outDir": "dist/server",
     "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["node"]
   },
   "include": ["src/server"],
   "exclude": ["node_modules", "dist"]

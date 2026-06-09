@@ -5,4 +5,6 @@ export const config = {
   offerPlatformBaseUrl:
     process.env.OFFER_PLATFORM_BASE_URL || 'http://localhost:8081',
   internalAuthToken: process.env.INTERNAL_AUTH_TOKEN || '',
+  clientId: process.env.CLIENT_ID || '10000',
+  offerPlatformToken: process.env.OFFER_PLATFORM_TOKEN || '',
 };
