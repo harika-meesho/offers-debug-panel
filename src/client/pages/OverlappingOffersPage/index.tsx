@@ -40,7 +40,7 @@ const EVENT_PALETTE = [
 ];
 
 const TABLE_COLUMNS = [
-  'ID', 'Offer ID', 'Event ID', 'Event Name', 'Time Window', 'Status', 'Name', 'Funding Type',
+  '#', 'Offer ID', 'Event ID', 'Event Name', 'Time Window', 'Status', 'Name', 'Funding Type',
 ] as const;
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -176,59 +176,20 @@ function MiniTimeline({
   );
 }
 
-// ─── selected offer card ──────────────────────────────────────────────────────
+// ─── selected offer bar tooltip ───────────────────────────────────────────────
 
-function LabelValue({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function SelectedBarTooltip({ ts }: { ts: EnrichedTimeslot }) {
   return (
-    <Box>
-      <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" sx={{ mb: 0.25 }}>
-        {label}
+    <Box sx={{ width: 280, p: 1 }}>
+      <Typography variant="caption" fontWeight={700} color="text.secondary" display="block" sx={{ mb: 1 }}>
+        Selected Offer
       </Typography>
-      <Typography
-        variant="body2"
-        fontFamily={mono ? 'monospace' : undefined}
-        fontSize={mono ? '0.8rem' : '0.85rem'}
-        sx={{ wordBreak: 'break-all' }}
-      >
-        {value}
+      <Divider sx={{ mb: 1 }} />
+      <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">Time Window</Typography>
+      <Typography variant="caption" fontFamily="monospace" fontSize="0.68rem">
+        {formatTime(ts.start_time)} → {formatTime(ts.end_time)}
       </Typography>
     </Box>
-  );
-}
-
-function SelectedOfferCard({ ts }: { ts: EnrichedTimeslot }) {
-  const d = ts.offer_detail;
-  return (
-    <Paper
-      variant="outlined"
-      sx={{ p: 3, mb: 3, borderColor: 'primary.main', borderWidth: 2, bgcolor: 'white' }}
-    >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-        <Typography fontWeight={700} fontSize="1rem">Selected Offer</Typography>
-        {d?.status && <StatusChip status={d.status} />}
-      </Box>
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 2 }}>
-        <LabelValue label="Offer ID" value={ts.offer_id} mono />
-        <LabelValue label="Event ID" value={ts.event_id} mono />
-        <LabelValue label="Event Name" value={ts.event_name || '—'} />
-        <LabelValue
-          label="Time Window"
-          value={`${formatTime(ts.start_time)} → ${formatTime(ts.end_time)}`}
-          mono
-        />
-        {d?.name && <LabelValue label="Name" value={d.name} />}
-        {d?.funding_type && <LabelValue label="Funding Type" value={d.funding_type} />}
-        {d?.created_by && <LabelValue label="Created By" value={d.created_by} />}
-        {d?.disabled_by && (
-          <Box>
-            <LabelValue label="Disabled By" value={d.disabled_by} />
-            {d.disabled_reason && (
-              <Typography variant="caption" color="error.main">{d.disabled_reason}</Typography>
-            )}
-          </Box>
-        )}
-      </Box>
-    </Paper>
   );
 }
 
@@ -365,8 +326,23 @@ export default function OverlappingOffersPage() {
           )}
         </Box>
 
-        {/* ── Selected offer card ── */}
-        <SelectedOfferCard ts={selectedTs} />
+        {/* ── Offer Lifecycle ── */}
+        {selectedEvent && (
+          <Box sx={{ mb: 3 }}>
+            <LifecycleSection
+              eventType={selectedEvent.event_type}
+              eventId={selectedEvent.event_id}
+              eventName={selectedEvent.event_name}
+              eventCategory={selectedEvent.event_category}
+              optinWindow={selectedEvent.optin_window}
+              optinId={selectedTs?.optin_id ?? undefined}
+              supplierId={sid}
+              offerDetail={selectedTs?.offer_detail}
+              slotStartTime={selectedTs.start_time}
+              slotEndTime={selectedTs.end_time}
+            />
+          </Box>
+        )}
 
         {/* ── Overlapping offers table ── */}
         {overlappingOffers.length === 0 ? (
@@ -403,26 +379,32 @@ export default function OverlappingOffersPage() {
                     const d = selectedTs.offer_detail;
                     return (
                       <TableRow sx={{ bgcolor: '#EEF4FB', borderLeft: `3px solid ${SELECTED_COLOR}` }}>
-                        <TableCell sx={{ fontSize: '0.75rem', width: 36 }}>
-                          <Chip label="→" size="small" color="primary" sx={{ height: 18, fontSize: '0.7rem', fontWeight: 700 }} />
+                        <TableCell sx={{ fontSize: '0.75rem', width: 36, color: 'text.disabled' }}>
+                          —
                         </TableCell>
                         <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.78rem', maxWidth: 260, wordBreak: 'break-all', fontWeight: 700 }}>
                           {selectedTs.offer_id}
                         </TableCell>
                         <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.78rem' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: SELECTED_COLOR, flexShrink: 0 }} />
-                            {selectedTs.event_id}
-                          </Box>
+                          {selectedTs.event_id}
                         </TableCell>
                         <TableCell sx={{ fontSize: '0.82rem' }}>{selectedTs.event_name || '—'}</TableCell>
                         <TableCell sx={{ minWidth: 200 }}>
-                          <SingleBar
-                            offer={selectedTs}
-                            color={SELECTED_COLOR}
-                            globalMin={globalMin}
-                            globalSpan={globalSpan}
-                          />
+                          <Tooltip
+                            title={<SelectedBarTooltip ts={selectedTs} />}
+                            placement="left"
+                            arrow
+                            slotProps={tooltipSlotProps}
+                          >
+                            <Box sx={{ display: 'inline-block' }}>
+                              <SingleBar
+                                offer={selectedTs}
+                                color={SELECTED_COLOR}
+                                globalMin={globalMin}
+                                globalSpan={globalSpan}
+                              />
+                            </Box>
+                          </Tooltip>
                         </TableCell>
                         <TableCell><StatusChip status={d?.status} /></TableCell>
                         <TableCell sx={{ fontSize: '0.82rem' }}>{d?.name || '—'}</TableCell>
@@ -448,10 +430,7 @@ export default function OverlappingOffersPage() {
                           {ts.offer_id}
                         </TableCell>
                         <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.78rem' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color, flexShrink: 0 }} />
-                            {ts.event_id}
-                          </Box>
+                          {ts.event_id}
                         </TableCell>
                         <TableCell sx={{ fontSize: '0.82rem' }}>{ts.event_name || '—'}</TableCell>
                         <TableCell sx={{ minWidth: 200 }}>
@@ -483,18 +462,6 @@ export default function OverlappingOffersPage() {
               </Table>
             </TableContainer>
           </Paper>
-        )}
-        {/* ── Lifecycle section ── */}
-        {selectedEvent && (
-          <LifecycleSection
-            eventType={selectedEvent.event_type}
-            optinWindow={selectedEvent.optin_window}
-            optinId={selectedTs?.optin_id ?? undefined}
-            supplierId={sid}
-            offerDetail={selectedTs?.offer_detail}
-            slotStartTime={selectedTs.start_time}
-            slotEndTime={selectedTs.end_time}
-          />
         )}
       </Container>
     </Box>

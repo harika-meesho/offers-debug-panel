@@ -161,3 +161,45 @@ export interface LifecycleAResponse {
   upload_jobs?: OfferJobsData;
   upload_jobs_error?: string;
 }
+
+// Top-level response from GET /admin/debug/panel/offer-lifecycle-b (step 2 only).
+// Steps 1 (event details) and 3 (offer live state) come from already-loaded panel data.
+export interface LifecycleBResponse {
+  upload_jobs?: OfferJobsData;
+  upload_jobs_error?: string;
+}
+
+// ─── Lifecycle B types (offline upload / direct flow) ─────────────────────────
+
+export type OfflineUploadStatus = 'COMPLETED' | 'ERROR' | 'REJECTED' | 'DISABLED' | 'PENDING' | 'IN_PROGRESS' | 'APPROVED' | string;
+export type JobStatus = 'COMPLETED' | 'ERROR' | 'IN_PROGRESS' | 'PENDING' | string;
+
+export interface OfflineUploadSummary {
+  id: number;
+  offerName: string;
+  type: string;
+  status: OfflineUploadStatus;
+  createdBy: string;
+  totalProducts: number;
+}
+
+export interface OfflineUploadDetail {
+  id: number;
+  type: string;
+  status: OfflineUploadStatus;
+  createdBy: string;
+  reviewedBy?: string;
+  totalProducts: number;
+  totalBatches: number;
+  resultFileKey?: string;
+  errorReason?: string;
+}
+
+export interface OfferJobStatus {
+  id: number;
+  jobType: string;
+  status: JobStatus;
+  sourceValue: string;
+  batches: { total: number; completed: number };
+  errors: string[];
+}

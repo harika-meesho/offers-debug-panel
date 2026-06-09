@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   Box,
-  Card,
-  CardContent,
   Chip,
   CircularProgress,
   Divider,
@@ -18,15 +16,53 @@ import {
   OfferJobsData,
   OfferDetail,
 } from '../../types';
-
 import { getLifecycleA } from '../../services/api';
+import LifecycleBSection from './LifecycleBSection';
 import { formatTime } from '../../utils/format';
+
+const M = {
+  purple:      '#6C3FC5',
+  purpleLight: '#F0EAFB',
+  purpleMid:   '#9B7EE0',
+  purpleBorder:'#DDD0F0',
+  purpleFaint: '#EDE7F6',
+};
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 function apiError(e: unknown): string {
   const err = e as { response?: { data?: { error?: string; message?: string } }; message?: string };
   return err?.response?.data?.error ?? err?.response?.data?.message ?? err?.message ?? 'Unknown error';
+}
+
+type StepState = 'done' | 'warn' | 'error' | 'loading' | 'pending';
+
+function StepCircle({ n, state }: { n: number; state: StepState }) {
+  const base = {
+    width: 30, height: 30, borderRadius: '50%',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0, fontSize: '0.78rem', fontWeight: 700,
+  };
+  if (state === 'loading') {
+    return (
+      <Box sx={{ ...base, border: `2px solid ${M.purple}` }}>
+        <CircularProgress size={14} sx={{ color: M.purple }} />
+      </Box>
+    );
+  }
+  const cfg: Record<StepState, { bg: string; border: string; color: string }> = {
+    done:    { bg: M.purple,       border: M.purple,        color: '#fff'      },
+    error:   { bg: '#D32F2F',      border: '#D32F2F',       color: '#fff'      },
+    warn:    { bg: '#ED6C02',      border: '#ED6C02',       color: '#fff'      },
+    pending: { bg: M.purpleLight,  border: M.purpleBorder,  color: M.purpleMid },
+    loading: { bg: '#fff',         border: M.purple,        color: M.purple    },
+  };
+  const c = cfg[state];
+  return (
+    <Box sx={{ ...base, bgcolor: c.bg, border: `2px solid ${c.border}`, color: c.color }}>
+      {n}
+    </Box>
+  );
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -50,8 +86,8 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
     <Box
       sx={{
         display: 'flex',
-        gap: 2,
-        py: 0.75,
+        gap: 1,
+        py: 0.5,
         alignItems: 'flex-start',
         borderBottom: '1px solid',
         borderColor: 'grey.100',
@@ -59,21 +95,21 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
       }}
     >
       <Typography
-        variant="body2"
+        variant="caption"
         color="text.secondary"
         fontWeight={600}
-        sx={{ minWidth: 200, flexShrink: 0 }}
+        sx={{ minWidth: 130, flexShrink: 0 }}
       >
         {label}
       </Typography>
-      <Box sx={{ flex: 1 }}>{children}</Box>
+      <Box sx={{ flex: 1, minWidth: 0 }}>{children}</Box>
     </Box>
   );
 }
 
 function DiscountChips({ data }: { data: Record<string, unknown> | Record<string, number> }) {
   const entries = Object.entries(data);
-  if (entries.length === 0) return <Typography variant="body2" color="text.secondary">—</Typography>;
+  if (entries.length === 0) return <Typography variant="caption" color="text.secondary">—</Typography>;
   return (
     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
       {entries.map(([k, v]) => (
@@ -89,74 +125,26 @@ function DiscountChips({ data }: { data: Record<string, unknown> | Record<string
   );
 }
 
-// ─── step card shell ──────────────────────────────────────────────────────────
-
-function StepCard({
-  step,
-  title,
-  loading,
-  stepError,
-  children,
-}: {
-  step: number;
-  title: string;
-  loading: boolean;
-  stepError?: string;
-  children?: React.ReactNode;
-}) {
-  return (
-    <Card variant="outlined" sx={{ mb: 2, bgcolor: 'white' }}>
-      <CardContent sx={{ pb: '16px !important' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: loading || stepError || children ? 2 : 0 }}>
-          <Box
-            sx={{
-              width: 28,
-              height: 28,
-              borderRadius: '50%',
-              bgcolor: 'primary.main',
-              color: 'white',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              flexShrink: 0,
-            }}
-          >
-            {step}
-          </Box>
-          <Typography fontWeight={700} fontSize="0.95rem">
-            {title}
-          </Typography>
-          {loading && <CircularProgress size={16} sx={{ ml: 'auto' }} />}
-        </Box>
-        {stepError && <Alert severity="warning" sx={{ mt: 1 }}>{stepError}</Alert>}
-        {!loading && !stepError && children}
-      </CardContent>
-    </Card>
-  );
-}
-
-// ─── step 1: optin window ─────────────────────────────────────────────────────
+// ─── step content components ──────────────────────────────────────────────────
 
 function Step1Content({ d }: { d: OptinEntryData }) {
   return (
     <Box>
       <FieldRow label="Optin ID">
-        <Typography variant="body2" fontFamily="monospace">{d.optin_id}</Typography>
+        <Typography variant="caption" fontFamily="monospace">{d.optin_id}</Typography>
       </FieldRow>
       <FieldRow label="Status"><StatusBadge status={d.optin_status} /></FieldRow>
       <FieldRow label="Optin Type">
         <Chip label={d.optin_type || '—'} size="small" color={d.optin_type === 'FILE' ? 'info' : 'default'} />
       </FieldRow>
       <FieldRow label="Optin Window">
-        <Typography variant="body2" fontFamily="monospace" fontSize="0.8rem">
+        <Typography variant="caption" fontFamily="monospace">
           {d.optin_start_date} → {d.optin_end_date}
         </Typography>
       </FieldRow>
       {d.parent_optin_id !== 0 && (
         <FieldRow label="Parent Optin ID">
-          <Typography variant="body2" fontFamily="monospace">{d.parent_optin_id}</Typography>
+          <Typography variant="caption" fontFamily="monospace">{d.parent_optin_id}</Typography>
         </FieldRow>
       )}
       <FieldRow label="Consent Required">
@@ -168,7 +156,7 @@ function Step1Content({ d }: { d: OptinEntryData }) {
       </FieldRow>
       {d.eligibility_criteria_description && (
         <FieldRow label="Eligibility">
-          <Typography variant="body2" color="text.secondary">{d.eligibility_criteria_description}</Typography>
+          <Typography variant="caption" color="text.secondary">{d.eligibility_criteria_description}</Typography>
         </FieldRow>
       )}
       {d.min_discount && Object.keys(d.min_discount).length > 0 && (
@@ -183,7 +171,7 @@ function Step1Content({ d }: { d: OptinEntryData }) {
             href={d.file_link}
             target="_blank"
             rel="noopener noreferrer"
-            variant="body2"
+            variant="caption"
             sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
           >
             {d.file_name || d.file_link}
@@ -194,26 +182,24 @@ function Step1Content({ d }: { d: OptinEntryData }) {
   );
 }
 
-// ─── step 2: supplier optin status ───────────────────────────────────────────
-
 function Step2Content({ d, supplierId }: { d: SupplierOptinDetails; supplierId: string }) {
   return (
     <Box>
       <FieldRow label="Supplier ID">
-        <Typography variant="body2" fontFamily="monospace">{supplierId}</Typography>
+        <Typography variant="caption" fontFamily="monospace">{supplierId}</Typography>
       </FieldRow>
       <FieldRow label="Supplier Optin ID">
-        <Typography variant="body2" fontFamily="monospace">{d.id}</Typography>
+        <Typography variant="caption" fontFamily="monospace">{d.id}</Typography>
       </FieldRow>
       <FieldRow label="Status"><StatusBadge status={d.opt_in_status} /></FieldRow>
       <FieldRow label="Products Opted In">
-        <Typography variant="body2">
+        <Typography variant="caption">
           {d.products.total_opted_in} / {d.products.total_available}
         </Typography>
       </FieldRow>
       {d.opt_in_start_date && (
         <FieldRow label="Optin Window">
-          <Typography variant="body2" fontFamily="monospace" fontSize="0.8rem">
+          <Typography variant="caption" fontFamily="monospace">
             {d.opt_in_start_date} → {d.opt_in_end_date}
           </Typography>
         </FieldRow>
@@ -227,15 +213,13 @@ function Step2Content({ d, supplierId }: { d: SupplierOptinDetails; supplierId: 
   );
 }
 
-// ─── step 3: file upload status ───────────────────────────────────────────────
-
 function Step3Content({ d }: { d: FileUploadStatus }) {
   return (
     <Box>
       <FieldRow label="Status"><StatusBadge status={d.status} /></FieldRow>
       {d.file_name && (
         <FieldRow label="Filename">
-          <Typography variant="body2" fontFamily="monospace">{d.file_name}</Typography>
+          <Typography variant="caption" fontFamily="monospace">{d.file_name}</Typography>
         </FieldRow>
       )}
       {d.link && (
@@ -245,7 +229,7 @@ function Step3Content({ d }: { d: FileUploadStatus }) {
             href={d.link}
             target="_blank"
             rel="noopener noreferrer"
-            variant="body2"
+            variant="caption"
             sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
           >
             Download file
@@ -255,9 +239,9 @@ function Step3Content({ d }: { d: FileUploadStatus }) {
       {d.error?.reason && (
         <FieldRow label="Error">
           <Box>
-            <Typography variant="body2" color="error.main">{d.error.reason}</Typography>
+            <Typography variant="caption" color="error.main">{d.error.reason}</Typography>
             {d.error.products != null && (
-              <Typography variant="caption" color="error.main">
+              <Typography variant="caption" color="error.main" display="block">
                 {d.error.products} products affected
               </Typography>
             )}
@@ -268,65 +252,39 @@ function Step3Content({ d }: { d: FileUploadStatus }) {
   );
 }
 
-// ─── step 4: upload job status ────────────────────────────────────────────────
-
 function Step4Content({ d }: { d: OfferJobsData }) {
   if (!d.data || d.data.length === 0) {
-    return (
-      <Typography variant="body2" color="text.secondary">No upload jobs found.</Typography>
-    );
+    return <Typography variant="caption" color="text.secondary">No upload jobs found.</Typography>;
   }
   return (
     <Box>
       {d.data.map((job) => (
-        <Paper key={job.id} variant="outlined" sx={{ p: 1.5, mb: 1, bgcolor: 'grey.50' }}>
+        <Box key={job.id} sx={{ p: 1.5, mb: 1, bgcolor: 'grey.50', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-            <Typography variant="body2" fontFamily="monospace" fontWeight={700}>
+            <Typography variant="caption" fontFamily="monospace" fontWeight={700}>
               Job #{job.id}
             </Typography>
             <StatusBadge status={job.status} />
             {job.job_type && (
-              <Chip label={job.job_type} size="small" variant="outlined" />
+              <Chip label={job.job_type} size="small" variant="outlined" sx={{ fontSize: '0.7rem' }} />
             )}
           </Box>
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-              gap: 1,
-            }}
-          >
-            {job.batches && (
-              <Box>
-                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
-                  Batches
-                </Typography>
-                <Typography variant="body2">
-                  {job.batches.completed ?? '?'} / {job.batches.total ?? '?'}
-                </Typography>
-              </Box>
-            )}
-            {job.progress_percentage != null && (
-              <Box>
-                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
-                  Progress
-                </Typography>
-                <Typography variant="body2">{job.progress_percentage}%</Typography>
-              </Box>
-            )}
-            <Box>
-              <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
-                Created
-              </Typography>
-              <Typography variant="body2" fontSize="0.8rem">{job.created_at}</Typography>
-            </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
-                Updated
-              </Typography>
-              <Typography variant="body2" fontSize="0.8rem">{job.updated_at}</Typography>
-            </Box>
-          </Box>
+          {job.batches && (
+            <FieldRow label="Batches">
+              <Typography variant="caption">{job.batches.completed ?? '?'} / {job.batches.total ?? '?'}</Typography>
+            </FieldRow>
+          )}
+          {job.progress_percentage != null && (
+            <FieldRow label="Progress">
+              <Typography variant="caption">{job.progress_percentage}%</Typography>
+            </FieldRow>
+          )}
+          <FieldRow label="Created">
+            <Typography variant="caption" fontSize="0.75rem">{job.created_at}</Typography>
+          </FieldRow>
+          <FieldRow label="Updated">
+            <Typography variant="caption" fontSize="0.75rem">{job.updated_at}</Typography>
+          </FieldRow>
           {job.error && job.error.length > 0 && (
             <Box sx={{ mt: 1 }}>
               {job.error.map((e, i) => (
@@ -336,15 +294,15 @@ function Step4Content({ d }: { d: OfferJobsData }) {
               ))}
             </Box>
           )}
-        </Paper>
+        </Box>
       ))}
     </Box>
   );
 }
 
-// ─── step 5: offer live state ─────────────────────────────────────────────────
-
 function Step5Content({ d, startTime, endTime }: { d: OfferDetail; startTime: number; endTime: number }) {
+  const resolvedStart = d.start_time || startTime;
+  const resolvedEnd = d.end_time || endTime;
   return (
     <Box>
       <FieldRow label="Status">
@@ -355,26 +313,31 @@ function Step5Content({ d, startTime, endTime }: { d: OfferDetail; startTime: nu
         />
       </FieldRow>
       <FieldRow label="Time Window">
-        <Typography variant="body2" fontFamily="monospace" fontSize="0.8rem">
-          {formatTime(d.start_time || startTime)} → {formatTime(d.end_time || endTime)}
+        <Typography variant="caption" fontFamily="monospace">
+          {formatTime(resolvedStart)} → {formatTime(resolvedEnd)}
         </Typography>
       </FieldRow>
+      {d.name && (
+        <FieldRow label="Name">
+          <Typography variant="caption">{d.name}</Typography>
+        </FieldRow>
+      )}
       {d.funding_type && (
         <FieldRow label="Funding Type">
-          <Typography variant="body2">{d.funding_type}</Typography>
+          <Typography variant="caption">{d.funding_type}</Typography>
         </FieldRow>
       )}
       {d.created_by && (
         <FieldRow label="Created By">
-          <Typography variant="body2">{d.created_by}</Typography>
+          <Typography variant="caption">{d.created_by}</Typography>
         </FieldRow>
       )}
       {d.disabled_by && (
         <FieldRow label="Disabled By">
           <Box>
-            <Typography variant="body2">{d.disabled_by}</Typography>
+            <Typography variant="caption">{d.disabled_by}</Typography>
             {d.disabled_reason && (
-              <Typography variant="caption" color="error.main">{d.disabled_reason}</Typography>
+              <Typography variant="caption" color="error.main" display="block">{d.disabled_reason}</Typography>
             )}
           </Box>
         </FieldRow>
@@ -384,11 +347,11 @@ function Step5Content({ d, startTime, endTime }: { d: OfferDetail; startTime: nu
           <Box
             sx={{
               fontFamily: 'monospace',
-              fontSize: '0.75rem',
+              fontSize: '0.72rem',
               bgcolor: 'grey.50',
               p: 1,
               borderRadius: 1,
-              maxHeight: 200,
+              maxHeight: 180,
               overflow: 'auto',
             }}
           >
@@ -410,6 +373,9 @@ interface LifecycleSectionProps {
   offerDetail: OfferDetail | undefined;
   slotStartTime: number;
   slotEndTime: number;
+  eventId: string;
+  eventName: string;
+  eventCategory: string;
 }
 
 export default function LifecycleSection({
@@ -420,12 +386,16 @@ export default function LifecycleSection({
   offerDetail,
   slotStartTime,
   slotEndTime,
+  eventId,
+  eventName,
+  eventCategory,
 }: LifecycleSectionProps) {
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [lifecycle, setLifecycle] = useState<LifecycleAResponse | null>(null);
 
   const optinType = optinWindow?.optin_type;
+  const isFileFlow = optinType === 'FILE';
 
   useEffect(() => {
     if (eventType !== 'optin') return;
@@ -443,121 +413,241 @@ export default function LifecycleSection({
     return () => { cancelled = true; };
   }, [optinId, supplierId, eventType, optinType]);
 
-  const isFileFlow = optinType === 'FILE';
+  if (eventType !== 'optin') {
+    return (
+      <LifecycleBSection
+        eventId={eventId}
+        eventType={eventType}
+        eventName={eventName}
+        eventCategory={eventCategory}
+        slotStartTime={slotStartTime}
+        slotEndTime={slotEndTime}
+        offerDetail={offerDetail}
+      />
+    );
+  }
 
-  return (
-    <Box sx={{ mt: 4 }}>
-      <Divider sx={{ mb: 3 }} />
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-        <Typography variant="h6" fontWeight={700}>
-          Offer Lifecycle
-        </Typography>
-        <Chip
-          label={eventType === 'optin' ? 'Lifecycle A — Optin' : 'Lifecycle B — Direct'}
-          size="small"
-          color={eventType === 'optin' ? 'secondary' : 'info'}
-        />
-      </Box>
+  // ── optin flow ───────────────────────────────────────────────────────────────
 
-      {eventType !== 'optin' ? (
-        <Alert severity="info">
-          Lifecycle B (Direct flow) — coming soon.
-        </Alert>
+  function step1State(): StepState {
+    return optinWindow ? 'done' : 'warn';
+  }
+
+  function step2State(): StepState {
+    if (loading && !lifecycle) return 'loading';
+    if (lifecycle?.supplier_optin_error) return 'error';
+    if (!optinId) return 'warn';
+    const s = lifecycle?.supplier_optin?.opt_in_status?.toLowerCase();
+    if (!s) return lifecycle ? 'warn' : 'pending';
+    return s === 'opted_in' || s === 'active' ? 'done' : 'warn';
+  }
+
+  function step3State(): StepState {
+    if (!isFileFlow) return 'pending';
+    if (loading && !lifecycle) return 'loading';
+    if (lifecycle?.file_upload_error) return 'error';
+    const s = lifecycle?.file_upload?.status?.toLowerCase();
+    if (!s) return lifecycle ? 'warn' : 'pending';
+    return s === 'completed' ? 'done' : s === 'failed' ? 'error' : 'warn';
+  }
+
+  function step4State(): StepState {
+    if (loading && !lifecycle) return 'loading';
+    if (lifecycle?.upload_jobs_error) return 'error';
+    if (!lifecycle?.upload_jobs?.data?.length) return lifecycle ? 'warn' : 'pending';
+    return lifecycle.upload_jobs.data.some((j) =>
+      j.status === 'FAILED' || j.status === 'ERROR'
+    ) ? 'error' : 'done';
+  }
+
+  function step5State(): StepState {
+    if (!offerDetail) return 'pending';
+    if (offerDetail.status === 'ACTIVE') return 'done';
+    if (offerDetail.status === 'DISABLED') return 'error';
+    return 'warn';
+  }
+
+  const steps: { index: number; title: string; state: StepState; content: React.ReactNode }[] = [
+    {
+      index: 1,
+      title: 'Optin Window',
+      state: step1State(),
+      content: optinWindow ? (
+        <Step1Content d={optinWindow} />
       ) : (
+        <Typography variant="caption" color="text.secondary">
+          No optin record found for this event.
+        </Typography>
+      ),
+    },
+    {
+      index: 2,
+      title: 'Supplier Optin Status',
+      state: step2State(),
+      content: (
         <>
-          {fetchError && (
-            <Alert severity="error" sx={{ mb: 2 }}>{fetchError}</Alert>
-          )}
-
-          {!optinId && !loading && (
-            <Alert severity="warning" sx={{ mb: 2 }}>
-              No optin_id on this timeslot — steps 2, 3 and 4 are unavailable.
+          {!optinId && (
+            <Alert severity="warning" sx={{ mb: 1, py: 0.5, fontSize: '0.8rem' }}>
+              No optin_id on this timeslot.
             </Alert>
           )}
-
-          {/* Step 1 — Optin Window (from panel response, no extra API call) */}
-          <StepCard step={1} title="Optin Window" loading={false}>
-            {optinWindow ? (
-              <Step1Content d={optinWindow} />
-            ) : (
-              <Typography variant="body2" color="text.secondary">
-                No optin record found for this event.
+          {lifecycle?.supplier_optin ? (
+            <Step2Content d={lifecycle.supplier_optin} supplierId={supplierId} />
+          ) : (
+            !loading && (
+              <Typography variant="caption" color="text.secondary">
+                {optinId ? 'No data returned.' : 'Skipped — optin_id missing.'}
               </Typography>
-            )}
-          </StepCard>
-
-          {/* Step 2 — Supplier Optin Status */}
-          <StepCard
-            step={2}
-            title="Supplier Optin Status"
-            loading={loading}
-            stepError={lifecycle?.supplier_optin_error}
-          >
-            {lifecycle?.supplier_optin ? (
-              <Step2Content d={lifecycle.supplier_optin} supplierId={supplierId} />
-            ) : (
-              !loading && !lifecycle?.supplier_optin_error && (
-                <Typography variant="body2" color="text.secondary">
-                  {optinId ? 'No data returned.' : 'Skipped — optin_id missing.'}
-                </Typography>
-              )
-            )}
-          </StepCard>
-
-          {/* Step 3 — File Upload Status (FILE flow only) */}
-          <StepCard
-            step={3}
-            title="File Upload Status"
-            loading={loading}
-            stepError={lifecycle?.file_upload_error}
-          >
-            {lifecycle?.file_upload ? (
-              <Step3Content d={lifecycle.file_upload} />
-            ) : (
-              !loading && (
-                <Typography variant="body2" color="text.secondary">
-                  {isFileFlow
-                    ? lifecycle?.file_upload_error
-                      ? undefined
-                      : 'No file upload data found.'
-                    : 'Not applicable — INLINE flow.'}
-                </Typography>
-              )
-            )}
-          </StepCard>
-
-          {/* Step 4 — Upload Job Status */}
-          <StepCard
-            step={4}
-            title="Upload Job Status"
-            loading={loading}
-            stepError={lifecycle?.upload_jobs_error}
-          >
-            {lifecycle?.upload_jobs ? (
-              <Step4Content d={lifecycle.upload_jobs} />
-            ) : (
-              !loading && !lifecycle?.upload_jobs_error && (
-                <Typography variant="body2" color="text.secondary">
-                  {lifecycle?.supplier_optin
-                    ? 'No upload jobs found.'
-                    : 'Not applicable — supplier has not opted in.'}
-                </Typography>
-              )
-            )}
-          </StepCard>
-
-          {/* Step 5 — Offer Live State (from Redux, no API call) */}
-          <StepCard step={5} title="Offer Live State" loading={false}>
-            {offerDetail ? (
-              <Step5Content d={offerDetail} startTime={slotStartTime} endTime={slotEndTime} />
-            ) : (
-              <Typography variant="body2" color="text.secondary">
-                Offer details not available.
-              </Typography>
-            )}
-          </StepCard>
+            )
+          )}
+          {lifecycle?.supplier_optin_error && (
+            <Alert severity="warning" sx={{ py: 0.5, fontSize: '0.8rem' }}>{lifecycle.supplier_optin_error}</Alert>
+          )}
         </>
+      ),
+    },
+    {
+      index: 3,
+      title: 'File Upload Status',
+      state: step3State(),
+      content: lifecycle?.file_upload ? (
+        <Step3Content d={lifecycle.file_upload} />
+      ) : (
+        !loading && (
+          <>
+            {lifecycle?.file_upload_error && (
+              <Alert severity="warning" sx={{ mb: 1, py: 0.5, fontSize: '0.8rem' }}>{lifecycle.file_upload_error}</Alert>
+            )}
+            <Typography variant="caption" color="text.secondary">
+              {isFileFlow
+                ? lifecycle?.file_upload_error ? undefined : 'No file upload data found.'
+                : 'Not applicable — optin type is not FILE.'}
+            </Typography>
+          </>
+        )
+      ),
+    },
+    {
+      index: 4,
+      title: 'Upload Job Status',
+      state: step4State(),
+      content: lifecycle?.upload_jobs ? (
+        <Step4Content d={lifecycle.upload_jobs} />
+      ) : (
+        !loading && (
+          <>
+            {lifecycle?.upload_jobs_error && (
+              <Alert severity="warning" sx={{ mb: 1, py: 0.5, fontSize: '0.8rem' }}>{lifecycle.upload_jobs_error}</Alert>
+            )}
+            <Typography variant="caption" color="text.secondary">
+              {lifecycle?.supplier_optin ? 'No upload jobs found.' : 'Not applicable — supplier has not opted in.'}
+            </Typography>
+          </>
+        )
+      ),
+    },
+    {
+      index: 5,
+      title: 'Offer Live State',
+      state: step5State(),
+      content: offerDetail ? (
+        <Step5Content d={offerDetail} startTime={slotStartTime} endTime={slotEndTime} />
+      ) : (
+        <Typography variant="caption" color="text.secondary">
+          Offer details not available.
+        </Typography>
+      ),
+    },
+  ];
+
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        bgcolor: 'white', overflow: 'hidden',
+        border: `1px solid ${M.purpleBorder}`,
+        borderTop: `3px solid ${M.purple}`,
+        borderRadius: 2,
+      }}
+    >
+      {/* Header */}
+      <Box sx={{ px: 3, py: 2, bgcolor: M.purpleLight, borderBottom: `1px solid ${M.purpleBorder}` }}>
+        <Typography fontWeight={700} fontSize="0.95rem" sx={{ color: M.purple }}>
+          Offer Lifecycle
+        </Typography>
+        <Typography variant="caption" sx={{ color: M.purpleMid }}>
+          Event {eventId} · optin flow
+        </Typography>
+      </Box>
+
+      {fetchError && (
+        <Alert severity="error" sx={{ mx: 3, mt: 2 }}>{fetchError}</Alert>
       )}
-    </Box>
+
+      {/* Horizontal step indicators */}
+      <Box sx={{ px: 3, pt: 2.5, pb: 2, overflowX: 'auto', bgcolor: 'white' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 700 }}>
+          {steps.map((step, i) => (
+            <React.Fragment key={step.index}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1, minWidth: 100 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.75 }}>
+                  <StepCircle n={step.index} state={step.state} />
+                  <Box>
+                    <Typography
+                      variant="caption"
+                      fontWeight={700}
+                      sx={{ fontSize: '0.68rem', color: M.purpleMid, display: 'block', lineHeight: 1 }}
+                    >
+                      STEP {step.index}
+                    </Typography>
+                    <Typography
+                      fontWeight={700}
+                      fontSize="0.85rem"
+                      sx={{ whiteSpace: 'nowrap', color: step.state === 'done' ? M.purple : 'text.primary' }}
+                    >
+                      {step.title}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+              {i < steps.length - 1 && (
+                <Box sx={{ display: 'flex', alignItems: 'center', px: 1, flexShrink: 0 }}>
+                  <Box
+                    sx={{
+                      width: 28, height: 2, borderRadius: 1,
+                      bgcolor: step.state === 'done' ? M.purple : M.purpleBorder,
+                      transition: 'background-color 0.3s',
+                    }}
+                  />
+                </Box>
+              )}
+            </React.Fragment>
+          ))}
+        </Box>
+      </Box>
+
+      <Divider sx={{ borderColor: M.purpleFaint }} />
+
+      {/* Step content columns */}
+      <Box sx={{ display: 'flex', overflowX: 'auto' }}>
+        {steps.map((step, i) => (
+          <Box
+            key={step.index}
+            sx={{
+              flex: 1,
+              p: 2.5,
+              minWidth: 200,
+              borderRight: i < steps.length - 1 ? `1px solid ${M.purpleFaint}` : 'none',
+            }}
+          >
+            {loading && !lifecycle && i > 0 && i < 4 ? (
+              <CircularProgress size={18} />
+            ) : (
+              step.content
+            )}
+          </Box>
+        ))}
+      </Box>
+    </Paper>
   );
 }

@@ -99,7 +99,7 @@ function EventsTable({ groups }: { groups: EventGroup[] }) {
           size="small"
         />
         <Chip
-          label={`${groups.reduce((n, g) => n + g.timeslots.length, 0)} Offer Timeslot${groups.reduce((n, g) => n + g.timeslots.length, 0) !== 1 ? 's' : ''}`}
+          label={`${groups.reduce((n, g) => n + g.timeslots.length, 0)} Offer${groups.reduce((n, g) => n + g.timeslots.length, 0) !== 1 ? 's' : ''}`}
           variant="outlined"
           size="small"
         />
