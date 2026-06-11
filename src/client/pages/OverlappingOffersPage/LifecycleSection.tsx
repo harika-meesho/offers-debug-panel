@@ -84,15 +84,21 @@ function DiscountChips({ data }: { data: Record<string, unknown> | Record<string
     );
   }
   return (
-    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
       {entries.map(([k, v]) => (
-        <Chip
-          key={k}
-          label={`${k}: ${String(v)}`}
-          size="small"
-          variant="outlined"
-          sx={{ fontFamily: 'monospace', fontSize: '0.72rem' }}
-        />
+        <Box key={k}>
+          <Chip
+            label={k}
+            size="small"
+            variant="outlined"
+            sx={{ fontFamily: 'monospace', fontSize: '0.7rem', mb: 0.5, height: 'auto', '& .MuiChip-label': { whiteSpace: 'normal', py: 0.25 } }}
+          />
+          <Box sx={{ bgcolor: 'grey.50', px: 1, py: 0.75, borderRadius: 1 }}>
+            <Typography variant="caption" fontFamily="monospace" fontWeight={600}>
+              {String(v)}
+            </Typography>
+          </Box>
+        </Box>
       ))}
     </Box>
   );
@@ -111,9 +117,10 @@ function Step1Content({ d }: { d: OptinEntryData }) {
         <Chip label={d.optin_type || '—'} size="small" />
       </FieldRow>
       <FieldRow label="Optin Window">
-        <Typography variant="caption" fontFamily="monospace">
-          {formatIsoDate(d.optin_start_date)} → {formatIsoDate(d.optin_end_date)}
-        </Typography>
+        <Box>
+          <Typography variant="caption" fontFamily="monospace" display="block">{formatIsoDate(d.optin_start_date)}</Typography>
+          <Typography variant="caption" fontFamily="monospace" display="block" color="text.secondary">→ {formatIsoDate(d.optin_end_date)}</Typography>
+        </Box>
       </FieldRow>
       {d.parent_optin_id !== 0 && (
         <FieldRow label="Parent Optin ID">
@@ -172,9 +179,10 @@ function Step2Content({ d, supplierId }: { d: SupplierOptinDetails; supplierId: 
       </FieldRow>
       {d.opt_in_start_date && (
         <FieldRow label="Optin Window">
-          <Typography variant="caption" fontFamily="monospace">
-            {formatIsoDate(d.opt_in_start_date)} → {formatIsoDate(d.opt_in_end_date)}
-          </Typography>
+          <Box>
+            <Typography variant="caption" fontFamily="monospace" display="block">{formatIsoDate(d.opt_in_start_date)}</Typography>
+            <Typography variant="caption" fontFamily="monospace" display="block" color="text.secondary">→ {formatIsoDate(d.opt_in_end_date)}</Typography>
+          </Box>
         </FieldRow>
       )}
       {d.min_discounts && Object.keys(d.min_discounts).length > 0 && (
@@ -458,12 +466,13 @@ export default function LifecycleSection({
           ) : (
             !loading && (
               <Typography variant="caption" color="text.secondary">
-                {optinId ? 'No data returned.' : 'Skipped — optin_id missing.'}
+                {lifecycle?.supplier_optin_error
+                  ? 'Supplier has not opted in.'
+                  : optinId
+                  ? 'No data returned.'
+                  : 'Skipped — optin_id missing.'}
               </Typography>
             )
-          )}
-          {lifecycle?.supplier_optin_error && (
-            <Alert severity="warning" sx={{ py: 0.5, fontSize: '0.8rem' }}>{lifecycle.supplier_optin_error}</Alert>
           )}
         </>
       ),
@@ -546,69 +555,68 @@ export default function LifecycleSection({
         <Alert severity="error" sx={{ mx: 3, mt: 2 }}>{fetchError}</Alert>
       )}
 
-      {/* Horizontal step indicators */}
-      <Box sx={{ px: 3, pt: 2.5, pb: 2, overflowX: 'auto', bgcolor: 'white' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 700 }}>
+      {/* Single scroll container keeps header + content in sync */}
+      <Box sx={{ overflowX: 'auto' }}>
+
+        {/* Step indicator row */}
+        <Box sx={{ display: 'flex', alignItems: 'center', px: 3, pt: 2.5, pb: 2, bgcolor: 'white', minWidth: `${steps.length * 220}px` }}>
           {steps.map((step, i) => (
             <React.Fragment key={step.index}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1, minWidth: 100 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.75 }}>
-                  <StepCircle n={step.index} state={step.state} />
-                  <Box>
-                    <Typography
-                      variant="caption"
-                      fontWeight={700}
-                      sx={{ fontSize: '0.68rem', color: M.purpleMid, display: 'block', lineHeight: 1 }}
-                    >
-                      STEP {step.index}
-                    </Typography>
-                    <Typography
-                      fontWeight={700}
-                      fontSize="0.85rem"
-                      sx={{ whiteSpace: 'nowrap', color: step.state === 'done' ? M.purple : 'text.primary' }}
-                    >
-                      {step.title}
-                    </Typography>
-                  </Box>
+              <Box sx={{ flex: 1, minWidth: 220, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <StepCircle n={step.index} state={step.state} />
+                <Box>
+                  <Typography
+                    variant="caption"
+                    fontWeight={700}
+                    sx={{ fontSize: '0.68rem', color: M.purpleMid, display: 'block', lineHeight: 1 }}
+                  >
+                    STEP {step.index}
+                  </Typography>
+                  <Typography
+                    fontWeight={700}
+                    fontSize="0.85rem"
+                    sx={{ whiteSpace: 'nowrap', color: step.state === 'done' ? M.purple : 'text.primary' }}
+                  >
+                    {step.title}
+                  </Typography>
                 </Box>
               </Box>
               {i < steps.length - 1 && (
-                <Box sx={{ display: 'flex', alignItems: 'center', px: 1, flexShrink: 0 }}>
-                  <Box
-                    sx={{
-                      width: 28, height: 2, borderRadius: 1,
-                      bgcolor: step.state === 'done' ? M.purple : M.purpleBorder,
-                      transition: 'background-color 0.3s',
-                    }}
-                  />
+                <Box sx={{ px: 1, flexShrink: 0 }}>
+                  <Box sx={{ width: 28, height: 2, borderRadius: 1, bgcolor: step.state === 'done' ? M.purple : M.purpleBorder, transition: 'background-color 0.3s' }} />
                 </Box>
               )}
             </React.Fragment>
           ))}
         </Box>
-      </Box>
 
-      <Divider sx={{ borderColor: M.purpleFaint }} />
+        <Divider sx={{ borderColor: M.purpleFaint }} />
 
-      {/* Step content columns */}
-      <Box sx={{ display: 'flex', overflowX: 'auto' }}>
-        {steps.map((step, i) => (
-          <Box
-            key={step.index}
-            sx={{
-              flex: 1,
-              p: 2.5,
-              minWidth: 260,
-              borderRight: i < steps.length - 1 ? `1px solid ${M.purpleFaint}` : 'none',
-            }}
-          >
-            {loading && !lifecycle && (i === 1 || i === 2 || i === 3) ? (
-              <CircularProgress size={18} />
-            ) : (
-              step.content
-            )}
-          </Box>
-        ))}
+        {/* Step content row */}
+        <Box sx={{ display: 'flex', minWidth: `${steps.length * 220}px` }}>
+          {steps.map((step, i) => (
+            <Box
+              key={step.index}
+              sx={{
+                flex: 1,
+                minWidth: 220,
+                maxWidth: 320,
+                overflowX: 'hidden',
+                p: 2.5,
+                wordBreak: 'break-word',
+                overflowWrap: 'break-word',
+                borderRight: i < steps.length - 1 ? `1px solid ${M.purpleFaint}` : 'none',
+              }}
+            >
+              {loading && !lifecycle && (step.index === 2 || step.index === 3 || step.index === 4) ? (
+                <CircularProgress size={18} />
+              ) : (
+                step.content
+              )}
+            </Box>
+          ))}
+        </Box>
+
       </Box>
     </Paper>
   );

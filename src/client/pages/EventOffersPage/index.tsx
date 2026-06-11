@@ -12,9 +12,9 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
   Paper,
   Alert,
-  Tooltip,
   Typography,
   TextField,
   Select,
@@ -34,33 +34,36 @@ import { RootState } from '@store/index';
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
-const COLUMNS = [
-  'ID', 'Offer ID', 'Time Window', 'Status', 'Name', 'Description',
-  'Funding Type', 'Created By', 'Disabled By',
-] as const;
+const STATUS_ORDER: Record<string, number> = { ACTIVE: 0, DISABLED: 1 };
+const statusRank = (s?: string) => STATUS_ORDER[s ?? ''] ?? 2;
+
+type SortCol = 'start_time' | 'status' | 'name' | 'funding_type';
+type SortKey = { col: SortCol; dir: 'asc' | 'desc' };
+
+const COLUMNS: { label: string; sortKey?: SortCol }[] = [
+  { label: 'ID' },
+  { label: 'Offer ID' },
+  { label: 'Time Window', sortKey: 'start_time' },
+  { label: 'Status', sortKey: 'status' },
+  { label: 'Name', sortKey: 'name' },
+  { label: 'Description' },
+  { label: 'Funding Type', sortKey: 'funding_type' },
+  { label: 'Created By' },
+  { label: 'Disabled By' },
+];
 
 // ─── sub-components ───────────────────────────────────────────────────────────
 
 function DisabledByCell({ disabledBy, reason }: { disabledBy: string; reason: string }) {
   return (
-    <Tooltip title={reason || ''} placement="top" arrow>
-      <Box>
-        <Typography
-          variant="body2"
-          fontSize="0.82rem"
-          sx={{ textDecoration: 'underline dotted', cursor: 'help' }}
-        >
-          {disabledBy}
-        </Typography>
-        {reason && (
-          <Typography variant="caption" color="error.main" display="block">
-            {reason}
-          </Typography>
-        )}
-      </Box>
-    </Tooltip>
+    <Box>
+      <Typography variant="body2" fontSize="0.82rem">{disabledBy}</Typography>
+      {reason && (
+        <Typography variant="caption" color="error.main" display="block">{reason}</Typography>
+      )}
+    </Box>
   );
 }
 
@@ -75,22 +78,50 @@ export default function EventOffersPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [sortKeys, setSortKeys] = useState<SortKey[]>([]);
+
+  function handleSort(col: SortCol) {
+    setSortKeys((prev) => {
+      const idx = prev.findIndex((k) => k.col === col);
+      if (idx === -1) return [...prev, { col, dir: 'asc' }];
+      if (prev[idx].dir === 'asc') {
+        const next = [...prev];
+        next[idx] = { col, dir: 'desc' };
+        return next;
+      }
+      return prev.filter((_, i) => i !== idx);
+    });
+    setPage(1);
+  }
 
   const event = data?.events.find((e) => e.event_id === eventId);
   const timeslots = event?.timeslots ?? [];
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return timeslots.filter((ts) => {
+    const base = timeslots.filter((ts) => {
       const d = ts.offer_detail;
       if (statusFilter && d?.status !== statusFilter) return false;
       if (q && !ts.offer_id.toLowerCase().includes(q) && !(d?.name ?? '').toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [timeslots, statusFilter, search]);
+    if (sortKeys.length === 0) return [...base].sort((a, b) => statusRank(a.offer_detail?.status) - statusRank(b.offer_detail?.status));
+    return [...base].sort((a, b) => {
+      for (const { col, dir } of sortKeys) {
+        let cmp = 0;
+        if (col === 'start_time') cmp = a.start_time - b.start_time;
+        else if (col === 'status') cmp = (a.offer_detail?.status ?? '').localeCompare(b.offer_detail?.status ?? '');
+        else if (col === 'name') cmp = (a.offer_detail?.name ?? '').localeCompare(b.offer_detail?.name ?? '');
+        else if (col === 'funding_type') cmp = (a.offer_detail?.funding_type ?? '').localeCompare(b.offer_detail?.funding_type ?? '');
+        if (cmp !== 0) return dir === 'asc' ? cmp : -cmp;
+      }
+      return 0;
+    });
+  }, [timeslots, statusFilter, search, sortKeys]);
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.ceil(filtered.length / pageSize);
+  const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const hasFilters = statusFilter || search;
 
@@ -129,7 +160,7 @@ export default function EventOffersPage() {
             sx={{ cursor: 'pointer', color: 'primary.main', fontWeight: 500, '&:hover': { textDecoration: 'underline' } }}
             onClick={() => navigate('/')}
           >
-            ← Event ID list
+            Event ID list
           </Typography>
           <Typography variant="body2" color="text.disabled" sx={{ mx: 0.5 }}>/</Typography>
           <Typography variant="body2" color="text.secondary">Event {eventId}</Typography>
@@ -169,7 +200,6 @@ export default function EventOffersPage() {
               >
                 <MenuItem value="">All</MenuItem>
                 <MenuItem value="ACTIVE">ACTIVE</MenuItem>
-                <MenuItem value="CREATED">CREATED</MenuItem>
                 <MenuItem value="DISABLED">DISABLED</MenuItem>
               </Select>
             </FormControl>
@@ -222,14 +252,35 @@ export default function EventOffersPage() {
             <Table>
               <TableHead>
                 <TableRow sx={{ bgcolor: 'grey.50' }}>
-                  {COLUMNS.map((col) => (
-                    <TableCell
-                      key={col}
-                      sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
-                    >
-                      {col}
-                    </TableCell>
-                  ))}
+                  {COLUMNS.map((col) => {
+                    const sortEntry = col.sortKey ? sortKeys.find((k) => k.col === col.sortKey) : undefined;
+                    const priority = col.sortKey ? sortKeys.findIndex((k) => k.col === col.sortKey) : -1;
+                    return (
+                      <TableCell
+                        key={col.label}
+                        sortDirection={sortEntry ? sortEntry.dir : false}
+                        sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                      >
+                        {col.sortKey ? (
+                          <TableSortLabel
+                            active={!!sortEntry}
+                            direction={sortEntry?.dir ?? 'asc'}
+                            onClick={() => handleSort(col.sortKey!)}
+                            sx={{ '& .MuiTableSortLabel-icon': { opacity: sortEntry ? 1 : 0.3, transition: 'opacity 0.2s' } }}
+                          >
+                            {col.label}
+                            {sortKeys.length > 1 && priority !== -1 && (
+                              <Typography component="span" sx={{ fontSize: '0.6rem', ml: 0.3, fontWeight: 700, color: 'primary.main', lineHeight: 1 }}>
+                                {priority + 1}
+                              </Typography>
+                            )}
+                          </TableSortLabel>
+                        ) : (
+                          col.label
+                        )}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -242,7 +293,7 @@ export default function EventOffersPage() {
                 ) : (
                   paged.map((ts, i) => {
                     const d = ts.offer_detail;
-                    const globalIdx = (page - 1) * PAGE_SIZE + i + 1;
+                    const globalIdx = (page - 1) * pageSize + i + 1;
                     return (
                       <TableRow
                         key={`${ts.offer_id}|${ts.start_time}`}
@@ -283,19 +334,37 @@ export default function EventOffersPage() {
             </Table>
           </TableContainer>
 
-          {/* Pagination — only shown when there is more than one page */}
-          {totalPages > 1 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 1.5, borderTop: '1px solid', borderColor: 'divider', gap: 2 }}>
-              <Typography variant="caption" color="text.secondary">
-                {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
-              </Typography>
-              <Pagination
-                count={totalPages}
-                page={page}
-                onChange={(_, v) => setPage(v)}
-                size="small"
-                color="primary"
-              />
+          {/* Pagination footer — always visible when there are results */}
+          {filtered.length > 0 && (
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1.5, borderTop: '1px solid', borderColor: 'divider', flexWrap: 'wrap', gap: 1 }}>
+              {/* Rows per page */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="caption" color="text.secondary">Rows per page:</Typography>
+                <Select
+                  size="small"
+                  value={pageSize}
+                  onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+                  sx={{ fontSize: '0.8rem', height: 28, '.MuiSelect-select': { py: 0.25, px: 1 } }}
+                >
+                  {PAGE_SIZE_OPTIONS.map((n) => (
+                    <MenuItem key={n} value={n} sx={{ fontSize: '0.8rem' }}>{n}</MenuItem>
+                  ))}
+                </Select>
+              </Box>
+
+              {/* Count + page controls */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Typography variant="caption" color="text.secondary">
+                  {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, filtered.length)} of {filtered.length}
+                </Typography>
+                <Pagination
+                  count={Math.max(1, totalPages)}
+                  page={page}
+                  onChange={(_, v) => setPage(v)}
+                  size="small"
+                  color="primary"
+                />
+              </Box>
             </Box>
           )}
         </Paper>
