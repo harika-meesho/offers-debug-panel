@@ -370,7 +370,7 @@ export default function OverlappingOffersPage() {
               eventId={selectedEvent.event_id}
               eventName={selectedEvent.event_name}
               eventCategory={selectedEvent.event_category}
-              optinWindow={selectedEvent.optin_window}
+              optinWindow={selectedEvent.optin}
               optinId={selectedTs?.optin_id ?? undefined}
               supplierId={sid}
               offerDetail={selectedTs?.offer_detail}

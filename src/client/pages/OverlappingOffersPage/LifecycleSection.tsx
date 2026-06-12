@@ -10,7 +10,7 @@ import {
 } from '@mui/material';
 import {
   LifecycleAResponse,
-  OptinEntryData,
+  OptinWindow,
   SupplierOptinDetails,
   FileUploadStatus,
   OfferJobsData,
@@ -106,58 +106,15 @@ function DiscountChips({ data }: { data: Record<string, unknown> | Record<string
 
 // ─── step content components ──────────────────────────────────────────────────
 
-function Step1Content({ d }: { d: OptinEntryData }) {
+function Step1Content({ d }: { d: OptinWindow }) {
   return (
     <Box>
-      <FieldRow label="Optin ID">
-        <Typography variant="caption" fontFamily="monospace">{d.optin_id}</Typography>
-      </FieldRow>
-      <FieldRow label="Status"><StatusBadge status={d.optin_status} /></FieldRow>
-      <FieldRow label="Optin Type">
-        <Chip label={d.optin_type || '—'} size="small" />
-      </FieldRow>
       <FieldRow label="Optin Window">
         <Box>
-          <Typography variant="caption" fontFamily="monospace" display="block">{formatIsoDate(d.optin_start_date)}</Typography>
-          <Typography variant="caption" fontFamily="monospace" display="block" color="text.secondary">→ {formatIsoDate(d.optin_end_date)}</Typography>
+          <Typography variant="caption" fontFamily="monospace" display="block">{formatIsoDate(d.start_date)}</Typography>
+          <Typography variant="caption" fontFamily="monospace" display="block" color="text.secondary">→ {formatIsoDate(d.end_date)}</Typography>
         </Box>
       </FieldRow>
-      {d.parent_optin_id !== 0 && (
-        <FieldRow label="Parent Optin ID">
-          <Typography variant="caption" fontFamily="monospace">{d.parent_optin_id}</Typography>
-        </FieldRow>
-      )}
-      <FieldRow label="Consent Required">
-        <Chip
-          label={d.is_consent_required ? 'Yes' : 'No'}
-          size="small"
-          color={d.is_consent_required ? 'warning' : 'default'}
-        />
-      </FieldRow>
-      {d.eligibility_criteria_description && (
-        <FieldRow label="Eligibility">
-          <Typography variant="caption" color="text.secondary">{d.eligibility_criteria_description}</Typography>
-        </FieldRow>
-      )}
-      {d.min_discount && Object.keys(d.min_discount).length > 0 && (
-        <FieldRow label="Min Discount">
-          <DiscountChips data={d.min_discount} />
-        </FieldRow>
-      )}
-      {d.file_link && (
-        <FieldRow label="File">
-          <Typography
-            component="a"
-            href={d.file_link}
-            target="_blank"
-            rel="noopener noreferrer"
-            variant="caption"
-            sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
-          >
-            {d.file_name || d.file_link}
-          </Typography>
-        </FieldRow>
-      )}
     </Box>
   );
 }
@@ -336,7 +293,7 @@ function Step5Content({ d, startTime, endTime }: { d: OfferDetail; startTime: nu
 
 interface LifecycleSectionProps {
   eventType: string;
-  optinWindow: OptinEntryData | undefined;
+  optinWindow: OptinWindow | undefined;
   optinId: string | undefined;
   supplierId: string;
   offerDetail: OfferDetail | undefined;
@@ -385,7 +342,7 @@ export default function LifecycleSection({
       .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
-  }, [optinId, supplierId, eventType, optinWindow?.optin_type]);
+  }, [optinId, supplierId, eventType]);
 
   if (eventType !== 'optin') {
     return (

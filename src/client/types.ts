@@ -23,6 +23,11 @@ export interface TimeslotWithDetail {
   offer_detail?: OfferDetail;
 }
 
+export interface OptinWindow {
+  start_date: string;
+  end_date: string;
+}
+
 export interface EventGroup {
   event_id: string;
   event_type: string;
@@ -31,7 +36,7 @@ export interface EventGroup {
   offer_ids: string[];
   start_time: number;
   end_time: number;
-  optin_window?: OptinEntryData;
+  optin?: OptinWindow;
   timeslots: TimeslotWithDetail[];
 }
 
@@ -142,7 +147,7 @@ export interface OfferJobsData {
 }
 
 // Top-level response from GET /admin/debug/panel/offer-lifecycle (steps 2–4 only).
-// Step 1 (optin window) comes from EventGroup.optin_window in the panel response.
+// Step 1 (optin window) comes from EventGroup.optin in the panel response.
 export interface LifecycleAResponse {
   supplier_optin?: SupplierOptinDetails;
   supplier_optin_error?: string;
