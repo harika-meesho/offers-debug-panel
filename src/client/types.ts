@@ -152,33 +152,4 @@ export interface LifecycleAResponse {
   upload_jobs_error?: string;
 }
 
-// ─── Lifecycle B types (offline upload / direct flow) ─────────────────────────
-
-export type OfflineUploadStatus = 'COMPLETED' | 'ERROR' | 'REJECTED' | 'DISABLED' | 'PENDING' | 'IN_PROGRESS' | 'APPROVED' | string;
-export type JobStatus = 'COMPLETED' | 'ERROR' | 'IN_PROGRESS' | 'PENDING' | string;
-
-export interface OfflineUploadSummary {
-  id: number;
-  offerName: string;
-  offerDescription?: string;
-  status: OfflineUploadStatus;
-  createdBy: string;
-  totalBatches: number;
-  completedBatches: number;
-}
-
-export interface OfflineUploadDetail {
-  id: number;
-  status: OfflineUploadStatus;
-  createdBy: string;
-  remarks?: string;
-  fileKey?: string;
-  totalBatches: number;
-  completedBatches: number;
-  resultFileKey?: string;
-  errorReason?: string;
-  errorFileKey?: string;
-  createdAt?: string;
-  completedAt?: string;
-}
 

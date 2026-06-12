@@ -340,6 +340,8 @@ interface LifecycleSectionProps {
   optinId: string | undefined;
   supplierId: string;
   offerDetail: OfferDetail | undefined;
+  eventStartTime: number;
+  eventEndTime: number;
   slotStartTime: number;
   slotEndTime: number;
   eventId: string;
@@ -353,6 +355,8 @@ export default function LifecycleSection({
   optinId,
   supplierId,
   offerDetail,
+  eventStartTime,
+  eventEndTime,
   slotStartTime,
   slotEndTime,
   eventId,
@@ -390,6 +394,8 @@ export default function LifecycleSection({
         eventType={eventType}
         eventName={eventName}
         eventCategory={eventCategory}
+        eventStartTime={eventStartTime}
+        eventEndTime={eventEndTime}
         slotStartTime={slotStartTime}
         slotEndTime={slotEndTime}
         offerDetail={offerDetail}

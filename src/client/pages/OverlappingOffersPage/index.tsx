@@ -374,6 +374,8 @@ export default function OverlappingOffersPage() {
               optinId={selectedTs?.optin_id ?? undefined}
               supplierId={sid}
               offerDetail={selectedTs?.offer_detail}
+              eventStartTime={selectedEvent.start_time}
+              eventEndTime={selectedEvent.end_time}
               slotStartTime={selectedTs.start_time}
               slotEndTime={selectedTs.end_time}
             />

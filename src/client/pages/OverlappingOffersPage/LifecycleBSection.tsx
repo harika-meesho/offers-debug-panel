@@ -1,18 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   Box,
   Paper,
   Typography,
   Chip,
-  CircularProgress,
-  Alert,
   Divider,
 } from '@mui/material';
-import type { OfferDetail, OfflineUploadSummary } from '../../types';
-import { getOfflineUploads } from '../../services/api';
+import type { OfferDetail } from '../../types';
 import { formatTime } from '../../utils/format';
 import { M, StepState, StepCircle } from '@components/StepCircle';
-import { apiError } from '@utils/apiError';
 import FieldRow from '@components/FieldRow';
 
 // ─── step 1: event details ────────────────────────────────────────────────────
@@ -38,49 +34,7 @@ function EventDetailsContent({
   );
 }
 
-// ─── step 2: offline uploads ─────────────────────────────────────────────────
-
-function OfflineUploadsContent({ uploads }: { uploads: OfflineUploadSummary[] }) {
-  if (uploads.length === 0) {
-    return (
-      <Typography variant="caption" sx={{ color: M.purpleMid }}>
-        No offline uploads found for this event.
-      </Typography>
-    );
-  }
-  return (
-    <Box>
-      {uploads.map((u, i) => (
-        <Box
-          key={u.id}
-          sx={{ pb: 1.5, mb: 1.5, borderBottom: i < uploads.length - 1 ? `1px solid ${M.purpleFaint}` : 'none' }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-            <Chip
-              label={u.status}
-              size="small"
-              color={
-                u.status === 'COMPLETED' ? 'success'
-                : u.status === 'ERROR' || u.status === 'REJECTED' || u.status === 'DISABLED' ? 'error'
-                : 'warning'
-              }
-              sx={{ fontWeight: 700, fontSize: '0.72rem' }}
-            />
-            <Typography variant="caption" sx={{ color: M.purpleMid }} fontFamily="monospace">
-              Upload #{u.id}
-            </Typography>
-          </Box>
-          {u.offerName && <FieldRow border={false} label="Offer Name" value={u.offerName} />}
-          {u.offerDescription && <FieldRow border={false} label="Offer Desc" value={u.offerDescription} />}
-          <FieldRow border={false} label="Created By" value={u.createdBy || '—'} />
-          <FieldRow border={false} label="Batches" value={`${u.completedBatches} / ${u.totalBatches} completed`} />
-        </Box>
-      ))}
-    </Box>
-  );
-}
-
-// ─── step 3: offer live state ─────────────────────────────────────────────────
+// ─── step 2: offer live state ─────────────────────────────────────────────────
 
 type LiveLabel = 'LIVE' | 'UPCOMING' | 'EXPIRED' | 'NOT ACTIVATED' | 'DISABLED';
 
@@ -141,6 +95,8 @@ interface Props {
   eventType: string;
   eventName: string;
   eventCategory: string;
+  eventStartTime: number;
+  eventEndTime: number;
   slotStartTime: number;
   slotEndTime: number;
   offerDetail: OfferDetail | undefined;
@@ -149,35 +105,9 @@ interface Props {
 type StepDef = { index: number; title: string; state: StepState; content: React.ReactNode };
 
 export default function LifecycleBSection({
-  eventId, eventType, eventName, eventCategory, slotStartTime, slotEndTime, offerDetail,
+  eventId, eventType, eventName, eventCategory,
+  eventStartTime, eventEndTime, slotStartTime, slotEndTime, offerDetail,
 }: Props) {
-  const [uploadsLoading, setUploadsLoading] = useState(false);
-  const [uploadsError, setUploadsError] = useState<string | null>(null);
-  const [uploads, setUploads] = useState<OfflineUploadSummary[]>([]);
-
-  useEffect(() => {
-    if (!eventId || eventId === 'unknown') return;
-    let cancelled = false;
-    setUploadsLoading(true); setUploadsError(null); setUploads([]);
-    getOfflineUploads(eventId)
-      .then((resp) => { if (!cancelled) setUploads(resp.uploads); })
-      .catch((e: unknown) => {
-        if (cancelled) return;
-        setUploadsError(apiError(e));
-      })
-      .finally(() => { if (!cancelled) setUploadsLoading(false); });
-    return () => { cancelled = true; };
-  }, [eventId]);
-
-  function uploadsStepState(): StepState {
-    if (uploadsLoading && uploads.length === 0) return 'loading';
-    if (uploadsError) return 'error';
-    if (!uploads.length) return 'warn';
-    return uploads.some((u) =>
-      u.status === 'ERROR' || u.status === 'REJECTED' || u.status === 'DISABLED'
-    ) ? 'error' : 'done';
-  }
-
   function offerStepState(): StepState {
     if (!offerDetail) return 'pending';
     const s = deriveLiveState(offerDetail, slotStartTime, slotEndTime);
@@ -193,24 +123,12 @@ export default function LifecycleBSection({
       content: (
         <EventDetailsContent
           eventId={eventId} eventType={eventType} eventName={eventName}
-          eventCategory={eventCategory} slotStartTime={slotStartTime} slotEndTime={slotEndTime}
+          eventCategory={eventCategory} slotStartTime={eventStartTime} slotEndTime={eventEndTime}
         />
       ),
     },
     {
-      index: 2, title: 'Offline Uploads', state: uploadsStepState(),
-      content: !eventId || eventId === 'unknown' ? (
-        <Typography variant="caption" sx={{ color: M.purpleMid }}>No event ID — offline uploads unavailable.</Typography>
-      ) : (
-        <>
-          {uploadsLoading && uploads.length === 0 && <CircularProgress size={18} sx={{ color: M.purple }} />}
-          {uploadsError && <Alert severity="error" sx={{ py: 0.5 }}>{uploadsError}</Alert>}
-          {!uploadsLoading && !uploadsError && <OfflineUploadsContent uploads={uploads} />}
-        </>
-      ),
-    },
-    {
-      index: 3, title: 'Offer Live State', state: offerStepState(),
+      index: 2, title: 'Offer Live State', state: offerStepState(),
       content: offerDetail ? (
         <OfferLiveContent d={offerDetail} slotStartTime={slotStartTime} slotEndTime={slotEndTime} />
       ) : (
