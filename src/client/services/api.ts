@@ -19,9 +19,11 @@ export async function getProductSupplierOffers(
 export async function getLifecycleA(
   optinId: string | undefined,
   supplierId: string,
+  rdTableName?: string,
 ): Promise<LifecycleAResponse> {
   const params: Record<string, string> = { sid: supplierId };
   if (optinId) params.optin_id = optinId;
+  if (rdTableName) params.rd_table_name = rdTableName;
   const { data } = await client.get('/admin/debug/panel/offer-lifecycle', { params });
   return data;
 }

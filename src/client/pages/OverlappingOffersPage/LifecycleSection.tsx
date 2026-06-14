@@ -109,24 +109,49 @@ function DiscountChips({ data }: { data: Record<string, unknown> | Record<string
 function Step1Content({ d }: { d: OptinWindow }) {
   return (
     <Box>
+      {!!d.optin_id && (
+        <FieldRow label="Optin ID">
+          <Typography variant="caption" fontFamily="monospace">{d.optin_id}</Typography>
+        </FieldRow>
+      )}
+      {d.optin_status && (
+        <FieldRow label="Status"><StatusBadge status={d.optin_status} /></FieldRow>
+      )}
+      {d.optin_type && (
+        <FieldRow label="Optin Type">
+          <Chip label={d.optin_type} size="small" variant="outlined" sx={{ fontFamily: 'monospace', fontSize: '0.7rem' }} />
+        </FieldRow>
+      )}
       <FieldRow label="Optin Window">
         <Box>
           <Typography variant="caption" fontFamily="monospace" display="block">{formatIsoDate(d.start_date)}</Typography>
           <Typography variant="caption" fontFamily="monospace" display="block" color="text.secondary">→ {formatIsoDate(d.end_date)}</Typography>
         </Box>
       </FieldRow>
+      {d.is_consent_required != null && (
+        <FieldRow label="Consent Required">
+          <Chip label={d.is_consent_required ? 'Yes' : 'No'} size="small" variant="outlined" sx={{ fontFamily: 'monospace', fontSize: '0.7rem' }} />
+        </FieldRow>
+      )}
+      {d.eligibility_criteria_description && (
+        <FieldRow label="Eligibility">
+          <Typography variant="caption">{d.eligibility_criteria_description}</Typography>
+        </FieldRow>
+      )}
+      {d.min_discount && Object.keys(d.min_discount).length > 0 && (
+        <FieldRow label="Min Discount">
+          <DiscountChips data={d.min_discount} />
+        </FieldRow>
+      )}
     </Box>
   );
 }
 
-function Step2Content({ d, supplierId }: { d: SupplierOptinDetails; supplierId: string }) {
+function Step2Content({ d }: { d: SupplierOptinDetails }) {
   return (
     <Box>
-      <FieldRow label="Supplier ID">
-        <Typography variant="caption" fontFamily="monospace">{supplierId}</Typography>
-      </FieldRow>
       <FieldRow label="Supplier Optin ID">
-        <Typography variant="caption" fontFamily="monospace">{d.id}</Typography>
+        <Typography variant="caption" fontFamily="monospace">{d.supplier_optin_id}</Typography>
       </FieldRow>
       <FieldRow label="Status"><StatusBadge status={d.opt_in_status} /></FieldRow>
       <FieldRow label="Products Opted In">
@@ -134,14 +159,6 @@ function Step2Content({ d, supplierId }: { d: SupplierOptinDetails; supplierId: 
           {d.products.total_opted_in} / {d.products.total_available}
         </Typography>
       </FieldRow>
-      {d.opt_in_start_date && (
-        <FieldRow label="Optin Window">
-          <Box>
-            <Typography variant="caption" fontFamily="monospace" display="block">{formatIsoDate(d.opt_in_start_date)}</Typography>
-            <Typography variant="caption" fontFamily="monospace" display="block" color="text.secondary">→ {formatIsoDate(d.opt_in_end_date)}</Typography>
-          </Box>
-        </FieldRow>
-      )}
       {d.min_discounts && Object.keys(d.min_discounts).length > 0 && (
         <FieldRow label="Min Discounts">
           <DiscountChips data={d.min_discounts} />
@@ -336,13 +353,14 @@ export default function LifecycleSection({
     setFetchError(null);
     setLifecycle(null);
 
-    getLifecycleA(optinId, supplierId)
+    const rdTableName = optinWindow?.recommended_discount_table_name;
+    getLifecycleA(optinId, supplierId, rdTableName)
       .then((resp) => { if (!cancelled) setLifecycle(resp); })
       .catch((e) => { if (!cancelled) setFetchError(apiError(e)); })
       .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
-  }, [optinId, supplierId, eventType]);
+  }, [optinId, supplierId, eventType, optinWindow?.recommended_discount_table_name]);
 
   if (eventType !== 'optin') {
     return (
@@ -425,7 +443,7 @@ export default function LifecycleSection({
             </Alert>
           )}
           {lifecycle?.supplier_optin ? (
-            <Step2Content d={lifecycle.supplier_optin} supplierId={supplierId} />
+            <Step2Content d={lifecycle.supplier_optin} />
           ) : (
             !loading && (
               <Typography variant="caption" color="text.secondary">
@@ -455,7 +473,9 @@ export default function LifecycleSection({
             <Typography variant="caption" color="text.secondary">
               {isFileFlow
                 ? lifecycle?.file_upload_error ? undefined : 'No file upload data found.'
-                : 'Not applicable — supplier flow type is INLINE.'}
+                : !lifecycle?.supplier_optin
+                ? 'Not applicable — supplier has not opted in.'
+                : 'Not applicable — optin type is not FILE.'}
             </Typography>
           </>
         )

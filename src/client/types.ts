@@ -18,14 +18,24 @@ export interface OfferDetail {
 export interface TimeslotWithDetail {
   offer_id: string;
   optin_id?: string;
+  supplier_optin_id?: string;
+  optin_confirmed?: boolean;
+  optin_window?: OptinWindow;
   start_time: number;
   end_time: number;
   offer_detail?: OfferDetail;
 }
 
 export interface OptinWindow {
+  optin_id?: number;
+  optin_status?: string;
+  optin_type?: string;
   start_date: string;
   end_date: string;
+  is_consent_required?: boolean;
+  eligibility_criteria_description?: string;
+  min_discount?: Record<string, unknown>;
+  recommended_discount_table_name?: string;
 }
 
 export interface EventGroup {
@@ -36,7 +46,6 @@ export interface EventGroup {
   offer_ids: string[];
   start_time: number;
   end_time: number;
-  optin?: OptinWindow;
   timeslots: TimeslotWithDetail[];
 }
 

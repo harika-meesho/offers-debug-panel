@@ -1,3 +1,4 @@
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import {
@@ -10,6 +11,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
   Paper,
   Alert,
   Tooltip,
@@ -39,9 +41,22 @@ const EVENT_PALETTE = [
   '#F44336', '#795548', '#607D8B', '#E91E63',
 ];
 
-const TABLE_COLUMNS = [
-  '#', 'Offer ID', 'Event ID', 'Event Name', 'Time Window', 'Status', 'Name', 'Funding Type',
-] as const;
+const STATUS_ORDER: Record<string, number> = { ACTIVE: 0, DISABLED: 1 };
+const statusRank = (s?: string) => STATUS_ORDER[s ?? ''] ?? 2;
+
+type SortCol = 'event_id' | 'status' | 'name' | 'funding_type';
+type SortKey = { col: SortCol; dir: 'asc' | 'desc' };
+
+const COLUMNS: { label: string; sortKey?: SortCol }[] = [
+  { label: '#' },
+  { label: 'Offer ID' },
+  { label: 'Event ID', sortKey: 'event_id' },
+  { label: 'Event Name' },
+  { label: 'Time Window' },
+  { label: 'Status', sortKey: 'status' },
+  { label: 'Name', sortKey: 'name' },
+  { label: 'Funding Type', sortKey: 'funding_type' },
+];
 
 const tooltipSlotProps = {
   tooltip: {
@@ -253,6 +268,21 @@ export default function OverlappingOffersPage() {
 
   const { data, pid, sid } = useSelector((state: RootState) => state.debugPanel);
 
+  const [sortKeys, setSortKeys] = useState<SortKey[]>([]);
+
+  function handleSort(col: SortCol) {
+    setSortKeys((prev) => {
+      const idx = prev.findIndex((k) => k.col === col);
+      if (idx === -1) return [...prev, { col, dir: 'asc' }];
+      if (prev[idx].dir === 'asc') {
+        const next = [...prev];
+        next[idx] = { col, dir: 'desc' };
+        return next;
+      }
+      return prev.filter((_, i) => i !== idx);
+    });
+  }
+
   if (!data) {
     return (
       <Box sx={{ minHeight: '100vh', bgcolor: '#F5F5F5' }}>
@@ -291,14 +321,26 @@ export default function OverlappingOffersPage() {
     );
   }
 
-  const overlappingOffers = allTimeslots
-    .filter(
+  const overlappingOffers = useMemo(() => {
+    const base = allTimeslots.filter(
       (ts) =>
         ts.offer_id !== selectedTs.offer_id &&
         ts.start_time < selectedTs.end_time &&
         ts.end_time > selectedTs.start_time
-    )
-    .sort((a, b) => a.event_id.localeCompare(b.event_id));
+    );
+    if (sortKeys.length === 0) return [...base].sort((a, b) => a.event_id.localeCompare(b.event_id));
+    return [...base].sort((a, b) => {
+      for (const { col, dir } of sortKeys) {
+        let cmp = 0;
+        if (col === 'event_id') cmp = a.event_id.localeCompare(b.event_id);
+        else if (col === 'status') cmp = statusRank(a.offer_detail?.status) - statusRank(b.offer_detail?.status);
+        else if (col === 'name') cmp = (a.offer_detail?.name ?? '').localeCompare(b.offer_detail?.name ?? '');
+        else if (col === 'funding_type') cmp = (a.offer_detail?.funding_type ?? '').localeCompare(b.offer_detail?.funding_type ?? '');
+        if (cmp !== 0) return dir === 'asc' ? cmp : -cmp;
+      }
+      return 0;
+    });
+  }, [allTimeslots, selectedTs, sortKeys]);
 
   // Stable color per event from palette
   const eventColorMap = new Map<string, string>();
@@ -370,8 +412,13 @@ export default function OverlappingOffersPage() {
               eventId={selectedEvent.event_id}
               eventName={selectedEvent.event_name}
               eventCategory={selectedEvent.event_category}
-              optinWindow={selectedEvent.optin}
-              optinId={selectedTs?.optin_id ?? undefined}
+              optinWindow={selectedTs?.optin_window}
+              optinId={
+                selectedTs?.optin_id ??
+                (selectedTs?.optin_window?.optin_id != null
+                  ? String(selectedTs.optin_window.optin_id)
+                  : undefined)
+              }
               supplierId={sid}
               offerDetail={selectedTs?.offer_detail}
               eventStartTime={selectedEvent.start_time}
@@ -401,14 +448,35 @@ export default function OverlappingOffersPage() {
               <Table>
                 <TableHead>
                   <TableRow sx={{ bgcolor: 'grey.50' }}>
-                    {TABLE_COLUMNS.map((col) => (
-                      <TableCell
-                        key={col}
-                        sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
-                      >
-                        {col}
-                      </TableCell>
-                    ))}
+                    {COLUMNS.map((col) => {
+                      const sortEntry = col.sortKey ? sortKeys.find((k) => k.col === col.sortKey) : undefined;
+                      const priority = col.sortKey ? sortKeys.findIndex((k) => k.col === col.sortKey) : -1;
+                      return (
+                        <TableCell
+                          key={col.label}
+                          sortDirection={sortEntry ? sortEntry.dir : false}
+                          sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                        >
+                          {col.sortKey ? (
+                            <TableSortLabel
+                              active={!!sortEntry}
+                              direction={sortEntry?.dir ?? 'asc'}
+                              onClick={() => handleSort(col.sortKey!)}
+                              sx={{ '& .MuiTableSortLabel-icon': { opacity: sortEntry ? 1 : 0.3, transition: 'opacity 0.2s' } }}
+                            >
+                              {col.label}
+                              {sortKeys.length > 1 && priority !== -1 && (
+                                <Typography component="span" sx={{ fontSize: '0.6rem', ml: 0.3, fontWeight: 700, color: 'primary.main', lineHeight: 1 }}>
+                                  {priority + 1}
+                                </Typography>
+                              )}
+                            </TableSortLabel>
+                          ) : (
+                            col.label
+                          )}
+                        </TableCell>
+                      );
+                    })}
                   </TableRow>
                 </TableHead>
                 <TableBody>
