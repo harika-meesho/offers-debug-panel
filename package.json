@@ -11,7 +11,9 @@
     "build:server": "tsc -p tsconfig.server.json",
     "start": "node dist/server/main.js",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
-    "format": "prettier --write 'src/**/*.{ts,tsx,json}'"
+    "format": "prettier --write 'src/**/*.{ts,tsx,json}'",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "@emotion/react": "11.13.3",
@@ -28,6 +30,9 @@
     "react-router-dom": "6.27.0"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/cors": "2.8.17",
     "@types/express": "4.17.21",
     "@types/node": "20.17.0",
@@ -41,13 +46,16 @@
     "eslint-config-prettier": "9.1.0",
     "eslint-plugin-react": "7.37.1",
     "eslint-plugin-react-hooks": "4.6.2",
+    "happy-dom": "^20.10.3",
     "husky": "9.1.6",
+    "jsdom": "^27.0.1",
     "lint-staged": "15.2.10",
     "playwright": "^1.60.0",
     "prettier": "3.3.3",
     "ts-node-dev": "2.0.0",
     "typescript": "5.6.3",
-    "vite": "5.4.9"
+    "vite": "5.4.9",
+    "vitest": "^4.1.8"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx}": [

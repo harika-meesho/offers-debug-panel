@@ -21,6 +21,6 @@
       "@utils/*":     ["./src/client/utils/*"]
     }
   },
-  "include": ["src/client", "vite.config.ts"],
+  "include": ["src/client", "src/test", "vite.config.ts"],
   "exclude": ["node_modules", "dist", "src/server"]
 }
