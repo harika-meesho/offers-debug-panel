@@ -40,12 +40,13 @@ function StatusBadge({ status }: { status: string }) {
     s === 'active' || s === 'opted_in' || s === 'completed' ? 'success'
     : s === 'closed' || s === 'not_opted_in' || s === 'failed' ? 'error'
     : s === 'pending' ? 'warning'
+    : s === 'initiated' ? 'info'
     : 'default';
   return (
     <Chip
       label={status || '—'}
       size="small"
-      color={color as 'success' | 'error' | 'warning' | 'default'}
+      color={color as 'success' | 'error' | 'warning' | 'info' | 'default'}
     />
   );
 }
