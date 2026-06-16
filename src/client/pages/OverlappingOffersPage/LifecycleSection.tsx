@@ -20,7 +20,7 @@ import { getLifecycleA } from '../../services/api';
 import LifecycleBSection from './LifecycleBSection';
 import { formatTime } from '../../utils/format';
 import { M, StepState, StepCircle } from '@components/StepCircle';
-import { apiError } from '@utils/apiError';
+import { apiError, parseLifecycleError } from '@utils/apiError';
 import FieldRow from '@components/FieldRow';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -176,20 +176,6 @@ function Step3Content({ d }: { d: FileUploadStatus }) {
       {d.file_name && (
         <FieldRow label="Filename">
           <Typography variant="caption" fontFamily="monospace">{d.file_name}</Typography>
-        </FieldRow>
-      )}
-      {d.link && (
-        <FieldRow label="Download">
-          <Typography
-            component="a"
-            href={d.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            variant="caption"
-            sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
-          >
-            Download file
-          </Typography>
         </FieldRow>
       )}
       {d.error?.reason && (
@@ -449,7 +435,7 @@ export default function LifecycleSection({
             !loading && (
               <Typography variant="caption" color="text.secondary">
                 {lifecycle?.supplier_optin_error
-                  ? 'Supplier has not opted in.'
+                  ? parseLifecycleError(lifecycle.supplier_optin_error)
                   : optinId
                   ? 'No data returned.'
                   : 'Skipped — optin_id missing.'}
@@ -469,7 +455,7 @@ export default function LifecycleSection({
         !loading && (
           <>
             {lifecycle?.file_upload_error && (
-              <Alert severity="warning" sx={{ mb: 1, py: 0.5, fontSize: '0.8rem' }}>{lifecycle.file_upload_error}</Alert>
+              <Alert severity="warning" sx={{ mb: 1, py: 0.5, fontSize: '0.8rem' }}>{parseLifecycleError(lifecycle.file_upload_error)}</Alert>
             )}
             <Typography variant="caption" color="text.secondary">
               {isFileFlow
@@ -492,7 +478,7 @@ export default function LifecycleSection({
         !loading && (
           <>
             {lifecycle?.upload_jobs_error && (
-              <Alert severity="warning" sx={{ mb: 1, py: 0.5, fontSize: '0.8rem' }}>{lifecycle.upload_jobs_error}</Alert>
+              <Alert severity="warning" sx={{ mb: 1, py: 0.5, fontSize: '0.8rem' }}>{parseLifecycleError(lifecycle.upload_jobs_error)}</Alert>
             )}
             <Typography variant="caption" color="text.secondary">
               {lifecycle?.supplier_optin ? 'No upload jobs found.' : 'Not applicable — supplier has not opted in.'}

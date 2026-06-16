@@ -4,36 +4,35 @@ import { config } from '../config';
 
 const router = Router();
 
-const supplierOptinProxy = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  try {
-    // req.path strips the matched prefix; combine with req.baseUrl for the full path.
-    const url = `${config.supplierOptinAdminBaseUrl}${req.baseUrl}${req.path}`;
-    const response = await axios({
-      method: req.method as any,
-      url,
-      params: req.query,
-      data: req.body,
-      timeout: 10_000,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(config.internalAuthToken
-          ? { Authorization: `Bearer ${config.internalAuthToken}` }
-          : {}),
-      },
-    });
-    res.status(response.status).json(response.data);
-  } catch (err: any) {
-    if (err.response) {
-      res.status(err.response.status).json(err.response.data);
-    } else {
-      next(err);
+const makeSupplierOptinProxy = (baseUrl: string) =>
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const url = `${baseUrl}${req.baseUrl}${req.path}`;
+      const response = await axios({
+        method: req.method as any,
+        url,
+        params: req.query,
+        data: req.body,
+        timeout: 10_000,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(config.internalAuthToken
+            ? { Authorization: `Bearer ${config.internalAuthToken}` }
+            : {}),
+        },
+      });
+      res.status(response.status).json(response.data);
+    } catch (err: any) {
+      if (err.response) {
+        res.status(err.response.status).json(err.response.data);
+      } else {
+        next(err);
+      }
     }
-  }
-};
+  };
+
+const supplierOptinProxy = makeSupplierOptinProxy(config.supplierOptinAdminBaseUrl);
+const supplierOptinSupplierProxy = makeSupplierOptinProxy(config.supplierOptinSupplierBaseUrl);
 
 const offerPlatformProxy = async (
   req: Request,
@@ -70,6 +69,10 @@ const offerPlatformProxy = async (
 router.use('/api/v1/optin', supplierOptinProxy);
 router.use('/admin/supplier', supplierOptinProxy);
 router.use('/admin/v2/supplier', supplierOptinProxy);
+router.use('/api/v1/admin/debug', supplierOptinProxy);
+
+// supplier-optin supplier routes
+router.use('/api/v1/offers/debug', supplierOptinSupplierProxy);
 
 // offer-platform-go routes
 router.use('/admin/productsupplier', offerPlatformProxy);
