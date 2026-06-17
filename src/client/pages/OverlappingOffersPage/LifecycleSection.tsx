@@ -381,8 +381,8 @@ export default function LifecycleSection({
   }
 
   function step3State(): StepState {
-    if (!isFileFlow) return 'pending';
     if (loading && !lifecycle) return 'loading';
+    if (!isFileFlow) return 'pending';
     if (lifecycle?.file_upload_error) return 'error';
     const s = lifecycle?.file_upload?.status?.toLowerCase();
     if (!s) return lifecycle ? 'warn' : 'pending';
@@ -404,6 +404,11 @@ export default function LifecycleSection({
     if (offerDetail.status === 'DISABLED') return 'error';
     return 'warn';
   }
+
+  const supplierOptinStatus = lifecycle?.supplier_optin?.opt_in_status?.toLowerCase();
+  const isSupplierOptedOut =
+    lifecycle?.supplier_optin != null &&
+    ['not_opted_in', 'opted_out', 'closed', 'failed', 'withdrawn'].includes(supplierOptinStatus ?? '');
 
   const steps: { index: number; title: string; state: StepState; content: React.ReactNode }[] = [
     {
@@ -492,7 +497,15 @@ export default function LifecycleSection({
       title: 'Offer Live State',
       state: step5State(),
       content: offerDetail ? (
-        <Step5Content d={offerDetail} startTime={slotStartTime} endTime={slotEndTime} />
+        <>
+          <Step5Content d={offerDetail} startTime={slotStartTime} endTime={slotEndTime} />
+          {offerDetail.status !== 'DISABLED' && isSupplierOptedOut && (
+            <Alert severity="warning" sx={{ mt: 1.5, py: 0.5, fontSize: '0.8rem' }}>
+              Active in DB but may not be live — supplier optin status is{' '}
+              <strong>{lifecycle?.supplier_optin?.opt_in_status}</strong>.
+            </Alert>
+          )}
+        </>
       ) : (
         <Typography variant="caption" color="text.secondary">
           Offer details not available.
