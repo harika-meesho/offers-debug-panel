@@ -42,7 +42,7 @@ const statusRank = (s?: string) => STATUS_ORDER[s ?? ''] ?? 2;
 type SortCol = 'start_time' | 'status' | 'name' | 'funding_type';
 type SortKey = { col: SortCol; dir: 'asc' | 'desc' };
 
-const COLUMNS: { label: string; sortKey?: SortCol }[] = [
+const BASE_COLUMNS: { label: string; sortKey?: SortCol }[] = [
   { label: 'ID' },
   { label: 'Offer ID' },
   { label: 'Time Window', sortKey: 'start_time' },
@@ -97,6 +97,13 @@ export default function EventOffersPage() {
 
   const event = data?.events.find((e) => e.event_id === eventId);
   const timeslots = event?.timeslots ?? [];
+  const isOptin = event?.event_type === 'optin';
+
+  const columns = useMemo(() => {
+    const cols = [...BASE_COLUMNS];
+    if (isOptin) cols.splice(2, 0, { label: 'Optin ID' });
+    return cols;
+  }, [isOptin]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -252,7 +259,7 @@ export default function EventOffersPage() {
             <Table>
               <TableHead>
                 <TableRow sx={{ bgcolor: 'grey.50' }}>
-                  {COLUMNS.map((col) => {
+                  {columns.map((col) => {
                     const sortEntry = col.sortKey ? sortKeys.find((k) => k.col === col.sortKey) : undefined;
                     const priority = col.sortKey ? sortKeys.findIndex((k) => k.col === col.sortKey) : -1;
                     return (
@@ -286,7 +293,7 @@ export default function EventOffersPage() {
               <TableBody>
                 {paged.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={COLUMNS.length} align="center" sx={{ py: 5, color: 'text.disabled' }}>
+                    <TableCell colSpan={columns.length} align="center" sx={{ py: 5, color: 'text.disabled' }}>
                       {hasFilters ? 'No offers match the current filters.' : 'No offers found for this event.'}
                     </TableCell>
                   </TableRow>
@@ -307,6 +314,11 @@ export default function EventOffersPage() {
                         <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.78rem', maxWidth: 300, wordBreak: 'break-all' }}>
                           {ts.offer_id}
                         </TableCell>
+                        {isOptin && (
+                          <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'text.primary' }}>
+                            {ts.optin_id ?? (ts.optin_window?.optin_id != null ? String(ts.optin_window.optin_id) : '—')}
+                          </TableCell>
+                        )}
                         <TableCell sx={{ whiteSpace: 'nowrap', fontSize: '0.82rem', fontFamily: 'monospace' }}>
                           {formatTime(ts.start_time)} → {formatTime(ts.end_time)}
                         </TableCell>
