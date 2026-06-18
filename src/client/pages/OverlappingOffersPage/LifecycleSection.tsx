@@ -13,7 +13,6 @@ import {
   OptinWindow,
   SupplierOptinDetails,
   FileUploadStatus,
-  OfferJobsData,
   OfferDetail,
 } from '../../types';
 import { getLifecycleA } from '../../services/api';
@@ -194,54 +193,6 @@ function Step3Content({ d }: { d: FileUploadStatus }) {
   );
 }
 
-function Step4Content({ d }: { d: OfferJobsData }) {
-  if (!d.data || d.data.length === 0) {
-    return <Typography variant="caption" color="text.secondary">No upload jobs found.</Typography>;
-  }
-  return (
-    <Box>
-      {d.data.map((job) => (
-        <Box key={job.id} sx={{ p: 1.5, mb: 1, bgcolor: 'grey.50', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-            <Typography variant="caption" fontFamily="monospace" fontWeight={700}>
-              Job #{job.id}
-            </Typography>
-            <StatusBadge status={job.status} />
-            {job.job_type && (
-              <Chip label={job.job_type} size="small" variant="outlined" sx={{ fontSize: '0.7rem' }} />
-            )}
-          </Box>
-          {job.batches && (
-            <FieldRow label="Batches">
-              <Typography variant="caption">{job.batches.completed ?? '?'} / {job.batches.total ?? '?'}</Typography>
-            </FieldRow>
-          )}
-          {job.progress_percentage != null && (
-            <FieldRow label="Progress">
-              <Typography variant="caption">{job.progress_percentage}%</Typography>
-            </FieldRow>
-          )}
-          <FieldRow label="Created">
-            <Typography variant="caption" fontSize="0.75rem">{job.created_at}</Typography>
-          </FieldRow>
-          <FieldRow label="Updated">
-            <Typography variant="caption" fontSize="0.75rem">{job.updated_at}</Typography>
-          </FieldRow>
-          {job.error && job.error.length > 0 && (
-            <Box sx={{ mt: 1 }}>
-              {job.error.map((e, i) => (
-                <Alert key={i} severity="error" sx={{ py: 0.25, fontSize: '0.8rem' }}>
-                  [{e.type}] {e.message}
-                </Alert>
-              ))}
-            </Box>
-          )}
-        </Box>
-      ))}
-    </Box>
-  );
-}
-
 function Step5Content({ d, startTime, endTime }: { d: OfferDetail; startTime: number; endTime: number }) {
   const resolvedStart = d.start_time || startTime;
   const resolvedEnd = d.end_time || endTime;
@@ -389,15 +340,6 @@ export default function LifecycleSection({
     return s === 'completed' ? 'done' : s === 'failed' ? 'error' : 'warn';
   }
 
-  function step4State(): StepState {
-    if (loading && !lifecycle) return 'loading';
-    if (lifecycle?.upload_jobs_error) return 'error';
-    if (!lifecycle?.upload_jobs?.data?.length) return lifecycle ? 'warn' : 'pending';
-    return lifecycle.upload_jobs.data.some((j) =>
-      j.status === 'FAILED' || j.status === 'ERROR'
-    ) ? 'error' : 'done';
-  }
-
   function step5State(): StepState {
     if (!offerDetail) return 'pending';
     if (offerDetail.status === 'ACTIVE') return 'done';
@@ -475,25 +417,6 @@ export default function LifecycleSection({
     },
     {
       index: 4,
-      title: 'Upload Job Status',
-      state: step4State(),
-      content: lifecycle?.upload_jobs ? (
-        <Step4Content d={lifecycle.upload_jobs} />
-      ) : (
-        !loading && (
-          <>
-            {lifecycle?.upload_jobs_error && (
-              <Alert severity="warning" sx={{ mb: 1, py: 0.5, fontSize: '0.8rem' }}>{parseLifecycleError(lifecycle.upload_jobs_error)}</Alert>
-            )}
-            <Typography variant="caption" color="text.secondary">
-              {lifecycle?.supplier_optin ? 'No upload jobs found.' : 'Not applicable — supplier has not opted in.'}
-            </Typography>
-          </>
-        )
-      ),
-    },
-    {
-      index: 5,
       title: 'Offer Live State',
       state: step5State(),
       content: offerDetail ? (
@@ -543,33 +466,26 @@ export default function LifecycleSection({
 
         {/* Step indicator row */}
         <Box sx={{ display: 'flex', alignItems: 'center', px: 3, pt: 2.5, pb: 2, bgcolor: 'white', minWidth: `${steps.length * 220}px` }}>
-          {steps.map((step, i) => (
-            <React.Fragment key={step.index}>
-              <Box sx={{ flex: 1, minWidth: 220, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <StepCircle n={step.index} state={step.state} />
-                <Box>
-                  <Typography
-                    variant="caption"
-                    fontWeight={700}
-                    sx={{ fontSize: '0.68rem', color: M.purpleMid, display: 'block', lineHeight: 1 }}
-                  >
-                    STEP {step.index}
-                  </Typography>
-                  <Typography
-                    fontWeight={700}
-                    fontSize="0.85rem"
-                    sx={{ whiteSpace: 'nowrap', color: step.state === 'done' ? M.purple : 'text.primary' }}
-                  >
-                    {step.title}
-                  </Typography>
-                </Box>
+          {steps.map((step) => (
+            <Box key={step.index} sx={{ flex: '1 1 0', minWidth: 220, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <StepCircle n={step.index} state={step.state} />
+              <Box>
+                <Typography
+                  variant="caption"
+                  fontWeight={700}
+                  sx={{ fontSize: '0.68rem', color: M.purpleMid, display: 'block', lineHeight: 1 }}
+                >
+                  STEP {step.index}
+                </Typography>
+                <Typography
+                  fontWeight={700}
+                  fontSize="0.85rem"
+                  sx={{ whiteSpace: 'nowrap', color: step.state === 'done' ? M.purple : 'text.primary' }}
+                >
+                  {step.title}
+                </Typography>
               </Box>
-              {i < steps.length - 1 && (
-                <Box sx={{ px: 1, flexShrink: 0 }}>
-                  <Box sx={{ width: 28, height: 2, borderRadius: 1, bgcolor: step.state === 'done' ? M.purple : M.purpleBorder, transition: 'background-color 0.3s' }} />
-                </Box>
-              )}
-            </React.Fragment>
+            </Box>
           ))}
         </Box>
 
@@ -581,9 +497,8 @@ export default function LifecycleSection({
             <Box
               key={step.index}
               sx={{
-                flex: 1,
+                flex: '1 1 0',
                 minWidth: 220,
-                maxWidth: 320,
                 overflowX: 'hidden',
                 p: 2.5,
                 wordBreak: 'break-word',

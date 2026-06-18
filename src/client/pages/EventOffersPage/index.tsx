@@ -31,6 +31,7 @@ import AppHeader from '@components/AppHeader';
 import StatusChip from '@components/StatusChip';
 import { formatTime } from '../../utils/format';
 import { RootState } from '@store/index';
+import type { EventGroup } from '../../types';
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -48,13 +49,56 @@ const BASE_COLUMNS: { label: string; sortKey?: SortCol }[] = [
   { label: 'Time Window', sortKey: 'start_time' },
   { label: 'Status', sortKey: 'status' },
   { label: 'Name', sortKey: 'name' },
-  { label: 'Description' },
   { label: 'Funding Type', sortKey: 'funding_type' },
   { label: 'Created By' },
   { label: 'Disabled By' },
 ];
 
 // ─── sub-components ───────────────────────────────────────────────────────────
+
+function EventDetailCard({ event }: { event: EventGroup }) {
+  const typeColor = event.event_type === 'optin' ? 'secondary' : event.event_type === 'direct' ? 'info' : 'default';
+  return (
+    <Paper variant="outlined" sx={{ bgcolor: 'white', mb: 2, px: 3, py: 2 }}>
+      <Typography fontWeight={700} fontSize="0.9rem" sx={{ mb: 1.5 }}>
+        Event Details
+      </Typography>
+      <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        <Box>
+          <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">Event ID</Typography>
+          <Typography variant="body2" fontFamily="monospace" fontWeight={700}>{event.event_id}</Typography>
+        </Box>
+        <Box>
+          <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">Type</Typography>
+          <Chip
+            label={event.event_type.charAt(0).toUpperCase() + event.event_type.slice(1)}
+            size="small"
+            color={typeColor as 'secondary' | 'info' | 'default'}
+            sx={{ mt: 0.25 }}
+          />
+        </Box>
+        {event.event_name && (
+          <Box>
+            <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">Event Name</Typography>
+            <Typography variant="body2">{event.event_name}</Typography>
+          </Box>
+        )}
+        {event.event_category && (
+          <Box>
+            <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">Category</Typography>
+            <Typography variant="body2">{event.event_category}</Typography>
+          </Box>
+        )}
+        <Box>
+          <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">Event Window</Typography>
+          <Typography variant="body2" fontFamily="monospace" fontSize="0.82rem">
+            {formatTime(event.start_time)} → {formatTime(event.end_time)}
+          </Typography>
+        </Box>
+      </Box>
+    </Paper>
+  );
+}
 
 function DisabledByCell({ disabledBy, reason }: { disabledBy: string; reason: string }) {
   return (
@@ -188,6 +232,9 @@ export default function EventOffersPage() {
             color="primary"
           />
         </Box>
+
+        {/* ── Event details card ── */}
+        {event && <EventDetailCard event={event} />}
 
         <Alert severity="info" sx={{ mb: 2 }}>
           Click any offer row to see all overlapping offers across events.
@@ -327,9 +374,6 @@ export default function EventOffersPage() {
                         </TableCell>
                         <TableCell sx={{ fontSize: '0.85rem', maxWidth: 200 }}>
                           {d?.name || '—'}
-                        </TableCell>
-                        <TableCell sx={{ fontSize: '0.85rem', color: 'text.secondary', maxWidth: 200 }}>
-                          {d?.description || '—'}
                         </TableCell>
                         <TableCell sx={{ fontSize: '0.82rem' }}>{d?.funding_type || '—'}</TableCell>
                         <TableCell sx={{ fontSize: '0.82rem' }}>{d?.created_by || '—'}</TableCell>

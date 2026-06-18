@@ -36,6 +36,47 @@ function EventDetailsContent({
 
 // ─── step 2: offer live state ─────────────────────────────────────────────────
 
+function DiscountChips({ data }: { data: Record<string, unknown> }) {
+  const entries = Object.entries(data);
+  if (entries.length === 0) return <Typography variant="caption" color="text.secondary">—</Typography>;
+  const hasObjectValues = entries.some(([, v]) => typeof v === 'object' && v !== null);
+  if (hasObjectValues) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        {entries.map(([k, v]) => (
+          <Box key={k}>
+            <Chip label={k} size="small" variant="outlined" sx={{ fontFamily: 'monospace', fontSize: '0.7rem', mb: 0.5 }} />
+            <Box sx={{ bgcolor: 'grey.50', px: 1, py: 0.75, borderRadius: 1 }}>
+              {typeof v === 'object' && v !== null ? (
+                Object.entries(v as Record<string, unknown>).map(([ik, iv]) => (
+                  <Typography key={ik} variant="caption" fontFamily="monospace" display="block" lineHeight={1.7}>
+                    <Box component="span" sx={{ color: 'text.secondary' }}>{ik}:</Box>
+                    {' '}{typeof iv === 'object' ? JSON.stringify(iv) : String(iv ?? '—')}
+                  </Typography>
+                ))
+              ) : (
+                <Typography variant="caption" fontFamily="monospace">{String(v)}</Typography>
+              )}
+            </Box>
+          </Box>
+        ))}
+      </Box>
+    );
+  }
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+      {entries.map(([k, v]) => (
+        <Box key={k}>
+          <Chip label={k} size="small" variant="outlined" sx={{ fontFamily: 'monospace', fontSize: '0.7rem', mb: 0.5, height: 'auto', '& .MuiChip-label': { whiteSpace: 'normal', py: 0.25 } }} />
+          <Box sx={{ bgcolor: 'grey.50', px: 1, py: 0.75, borderRadius: 1 }}>
+            <Typography variant="caption" fontFamily="monospace" fontWeight={600}>{String(v)}</Typography>
+          </Box>
+        </Box>
+      ))}
+    </Box>
+  );
+}
+
 type LiveLabel = 'LIVE' | 'UPCOMING' | 'EXPIRED' | 'NOT ACTIVATED' | 'DISABLED';
 
 function toSec(ts: number): number {
@@ -82,6 +123,14 @@ function OfferLiveContent({
           <Divider sx={{ my: 1, borderColor: M.purpleFaint }} />
           <FieldRow border={false} label="Disabled By" value={d.disabled_by} mono />
           {d.disabled_reason && <FieldRow border={false} label="Disable Reason" value={d.disabled_reason} />}
+        </>
+      )}
+      {d.discounts && Object.keys(d.discounts).length > 0 && (
+        <>
+          <Divider sx={{ my: 1, borderColor: M.purpleFaint }} />
+          <FieldRow border={false} label="Discounts">
+            <DiscountChips data={d.discounts} />
+          </FieldRow>
         </>
       )}
     </Box>
@@ -161,7 +210,7 @@ export default function LifecycleBSection({
       {/* Step indicators */}
       <Box sx={{ px: 3, pt: 2.5, pb: 2, bgcolor: 'white' }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          {steps.map((step, i) => (
+          {steps.map((step) => (
             <React.Fragment key={step.index}>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1, minWidth: 0 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.75 }}>
@@ -180,17 +229,6 @@ export default function LifecycleBSection({
                   </Box>
                 </Box>
               </Box>
-              {i < steps.length - 1 && (
-                <Box sx={{ display: 'flex', alignItems: 'center', px: 1.5, flexShrink: 0 }}>
-                  <Box
-                    sx={{
-                      width: 40, height: 2, borderRadius: 1,
-                      bgcolor: step.state === 'done' ? M.purple : M.purpleBorder,
-                      transition: 'background-color 0.3s',
-                    }}
-                  />
-                </Box>
-              )}
             </React.Fragment>
           ))}
         </Box>
