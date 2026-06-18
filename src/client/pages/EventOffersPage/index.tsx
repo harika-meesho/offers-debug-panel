@@ -64,6 +64,14 @@ function EventDetailCard({ event }: { event: EventGroup }) {
         Event Details
       </Typography>
       <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        {event.event_image && (
+          <Box
+            component="img"
+            src={event.event_image}
+            alt={event.event_name}
+            sx={{ width: 64, height: 64, borderRadius: 1, objectFit: 'cover', flexShrink: 0, border: '1px solid', borderColor: 'divider' }}
+          />
+        )}
         <Box>
           <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">Event ID</Typography>
           <Typography variant="body2" fontFamily="monospace" fontWeight={700}>{event.event_id}</Typography>
@@ -92,7 +100,7 @@ function EventDetailCard({ event }: { event: EventGroup }) {
         <Box>
           <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">Event Window</Typography>
           <Typography variant="body2" fontFamily="monospace" fontSize="0.82rem">
-            {formatTime(event.start_time)} → {formatTime(event.end_time)}
+            {formatTime(event.event_start_time || event.start_time)} → {formatTime(event.event_end_time || event.end_time)}
           </Typography>
         </Box>
       </Box>

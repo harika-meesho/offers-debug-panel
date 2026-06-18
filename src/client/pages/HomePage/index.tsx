@@ -148,8 +148,8 @@ function EventsTable({ groups }: { groups: EventGroup[] }) {
           let cmp = 0;
           if (col === 'event_id') cmp = a.event_id.localeCompare(b.event_id);
           else if (col === 'offers') cmp = a.timeslots.length - b.timeslots.length;
-          else if (col === 'start_time') cmp = a.start_time - b.start_time;
-          else if (col === 'end_time') cmp = a.end_time - b.end_time;
+          else if (col === 'start_time') cmp = (a.event_start_time || a.start_time) - (b.event_start_time || b.start_time);
+          else if (col === 'end_time') cmp = (a.event_end_time || a.end_time) - (b.event_end_time || b.end_time);
           if (cmp !== 0) return dir === 'asc' ? cmp : -cmp;
         }
         return 0;
@@ -303,10 +303,10 @@ function EventsTable({ groups }: { groups: EventGroup[] }) {
                     <Chip label={group.timeslots.length} size="small" variant="outlined" sx={{ fontWeight: 700 }} />
                   </TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap', fontSize: '0.82rem' }}>
-                    {formatTime(group.start_time)}
+                    {formatTime(group.event_start_time || group.start_time)}
                   </TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap', fontSize: '0.82rem' }}>
-                    {formatTime(group.end_time)}
+                    {formatTime(group.event_end_time || group.end_time)}
                   </TableCell>
                 </TableRow>
               ))
