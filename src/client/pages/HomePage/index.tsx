@@ -284,7 +284,17 @@ function EventsTable({ groups }: { groups: EventGroup[] }) {
                     <TypeChip eventType={group.event_type} />
                   </TableCell>
                   <TableCell sx={{ fontSize: '0.85rem', color: 'text.primary', minWidth: 140 }}>
-                    {group.event_name || '—'}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {group.event_image && (
+                        <Box
+                          component="img"
+                          src={group.event_image}
+                          alt={group.event_name}
+                          sx={{ width: 40, height: 40, borderRadius: 0.5, objectFit: 'cover', flexShrink: 0, border: '1px solid', borderColor: 'divider' }}
+                        />
+                      )}
+                      {group.event_name || '—'}
+                    </Box>
                   </TableCell>
                   <TableCell sx={{ fontSize: '0.85rem', color: 'text.secondary', minWidth: 120 }}>
                     {group.event_category || '—'}
