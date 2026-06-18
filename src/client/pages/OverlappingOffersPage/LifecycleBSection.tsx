@@ -14,22 +14,37 @@ import FieldRow from '@components/FieldRow';
 // ─── step 1: event details ────────────────────────────────────────────────────
 
 function EventDetailsContent({
-  eventId, eventType, eventName, eventCategory, slotStartTime, slotEndTime,
+  eventId, eventType, eventName, eventCategory, subEventCategory,
+  eventImage, eventDescription, slotStartTime, slotEndTime,
 }: {
   eventId: string; eventType: string; eventName: string;
-  eventCategory: string; slotStartTime: number; slotEndTime: number;
+  eventCategory: string; subEventCategory?: string;
+  eventImage?: string; eventDescription?: string;
+  slotStartTime: number; slotEndTime: number;
 }) {
   return (
     <Box>
+      {eventImage && (
+        <Box
+          component="img"
+          src={eventImage}
+          alt={eventName}
+          sx={{ width: 64, height: 64, borderRadius: 1, objectFit: 'cover', mb: 1.5, display: 'block', border: '1px solid', borderColor: 'divider' }}
+        />
+      )}
       <FieldRow border={false} label="Event ID" value={eventId} mono />
       <FieldRow border={false} label="Event Type" value={eventType} />
       {eventName && <FieldRow border={false} label="Event Name" value={eventName} />}
       {eventCategory && <FieldRow border={false} label="Category" value={eventCategory} />}
-      <FieldRow border={false}
-        label="Time Window"
-        value={`${formatTime(slotStartTime)} → ${formatTime(slotEndTime)}`}
-        mono
-      />
+      {subEventCategory && <FieldRow border={false} label="Sub-Category" value={subEventCategory} />}
+      {slotStartTime > 0 && (
+        <FieldRow border={false}
+          label="Event Window"
+          value={`${formatTime(slotStartTime)} → ${formatTime(slotEndTime)}`}
+          mono
+        />
+      )}
+      {eventDescription && <FieldRow border={false} label="Description" value={eventDescription} />}
     </Box>
   );
 }
@@ -144,6 +159,9 @@ interface Props {
   eventType: string;
   eventName: string;
   eventCategory: string;
+  subEventCategory?: string;
+  eventImage?: string;
+  eventDescription?: string;
   eventStartTime: number;
   eventEndTime: number;
   slotStartTime: number;
@@ -154,7 +172,8 @@ interface Props {
 type StepDef = { index: number; title: string; state: StepState; content: React.ReactNode };
 
 export default function LifecycleBSection({
-  eventId, eventType, eventName, eventCategory,
+  eventId, eventType, eventName, eventCategory, subEventCategory,
+  eventImage, eventDescription,
   eventStartTime, eventEndTime, slotStartTime, slotEndTime, offerDetail,
 }: Props) {
   function offerStepState(): StepState {
@@ -172,7 +191,9 @@ export default function LifecycleBSection({
       content: (
         <EventDetailsContent
           eventId={eventId} eventType={eventType} eventName={eventName}
-          eventCategory={eventCategory} slotStartTime={eventStartTime} slotEndTime={eventEndTime}
+          eventCategory={eventCategory} subEventCategory={subEventCategory}
+          eventImage={eventImage} eventDescription={eventDescription}
+          slotStartTime={eventStartTime} slotEndTime={eventEndTime}
         />
       ),
     },
@@ -198,13 +219,28 @@ export default function LifecycleBSection({
       }}
     >
       {/* Header */}
-      <Box sx={{ px: 3, py: 2, bgcolor: M.purpleLight, borderBottom: `1px solid ${M.purpleBorder}` }}>
-        <Typography fontWeight={700} fontSize="0.95rem" sx={{ color: M.purple }}>
-          Offer Lifecycle
-        </Typography>
-        <Typography variant="caption" sx={{ color: M.purpleMid }}>
-          Event {eventId} · {eventType} flow
-        </Typography>
+      <Box sx={{ px: 3, py: 2, bgcolor: M.purpleLight, borderBottom: `1px solid ${M.purpleBorder}`, display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+        {eventImage && (
+          <Box
+            component="img"
+            src={eventImage}
+            alt={eventName}
+            sx={{ width: 56, height: 56, borderRadius: 1, objectFit: 'cover', flexShrink: 0, border: `1px solid ${M.purpleBorder}` }}
+          />
+        )}
+        <Box>
+          <Typography fontWeight={700} fontSize="0.95rem" sx={{ color: M.purple }}>
+            {eventName || 'Offer Lifecycle'}
+          </Typography>
+          <Typography variant="caption" sx={{ color: M.purpleMid }}>
+            Event {eventId}{eventCategory ? ` · ${eventCategory}` : ''}{subEventCategory ? ` / ${subEventCategory}` : ''} · {eventType} flow
+          </Typography>
+          {eventDescription && (
+            <Typography variant="caption" sx={{ color: M.purpleMid, display: 'block', mt: 0.5, lineHeight: 1.4 }}>
+              {eventDescription}
+            </Typography>
+          )}
+        </Box>
       </Box>
 
       {/* Step indicators */}

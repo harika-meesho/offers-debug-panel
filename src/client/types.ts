@@ -43,9 +43,14 @@ export interface EventGroup {
   event_type: string;
   event_name: string;
   event_category: string;
+  sub_event_category?: string;
   offer_ids: string[];
   start_time: number;
   end_time: number;
+  event_start_time?: number;
+  event_end_time?: number;
+  event_image?: string;
+  event_description?: string;
   timeslots: TimeslotWithDetail[];
 }
 

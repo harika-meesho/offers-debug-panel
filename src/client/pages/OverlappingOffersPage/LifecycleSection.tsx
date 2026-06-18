@@ -259,6 +259,9 @@ interface LifecycleSectionProps {
   eventId: string;
   eventName: string;
   eventCategory: string;
+  subEventCategory?: string;
+  eventImage?: string;
+  eventDescription?: string;
 }
 
 export default function LifecycleSection({
@@ -274,6 +277,9 @@ export default function LifecycleSection({
   eventId,
   eventName,
   eventCategory,
+  subEventCategory,
+  eventImage,
+  eventDescription,
 }: LifecycleSectionProps) {
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -307,6 +313,9 @@ export default function LifecycleSection({
         eventType={eventType}
         eventName={eventName}
         eventCategory={eventCategory}
+        subEventCategory={subEventCategory}
+        eventImage={eventImage}
+        eventDescription={eventDescription}
         eventStartTime={eventStartTime}
         eventEndTime={eventEndTime}
         slotStartTime={slotStartTime}
@@ -448,13 +457,28 @@ export default function LifecycleSection({
       }}
     >
       {/* Header */}
-      <Box sx={{ px: 3, py: 2, bgcolor: M.purpleLight, borderBottom: `1px solid ${M.purpleBorder}` }}>
-        <Typography fontWeight={700} fontSize="0.95rem" sx={{ color: M.purple }}>
-          Offer Lifecycle
-        </Typography>
-        <Typography variant="caption" sx={{ color: M.purpleMid }}>
-          Event {eventId} · optin flow
-        </Typography>
+      <Box sx={{ px: 3, py: 2, bgcolor: M.purpleLight, borderBottom: `1px solid ${M.purpleBorder}`, display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+        {eventImage && (
+          <Box
+            component="img"
+            src={eventImage}
+            alt={eventName}
+            sx={{ width: 56, height: 56, borderRadius: 1, objectFit: 'cover', flexShrink: 0, border: `1px solid ${M.purpleBorder}` }}
+          />
+        )}
+        <Box>
+          <Typography fontWeight={700} fontSize="0.95rem" sx={{ color: M.purple }}>
+            {eventName || 'Offer Lifecycle'}
+          </Typography>
+          <Typography variant="caption" sx={{ color: M.purpleMid }}>
+            Event {eventId}{eventCategory ? ` · ${eventCategory}` : ''}{subEventCategory ? ` / ${subEventCategory}` : ''} · optin flow
+          </Typography>
+          {eventDescription && (
+            <Typography variant="caption" sx={{ color: M.purpleMid, display: 'block', mt: 0.5, lineHeight: 1.4 }}>
+              {eventDescription}
+            </Typography>
+          )}
+        </Box>
       </Box>
 
       {fetchError && (

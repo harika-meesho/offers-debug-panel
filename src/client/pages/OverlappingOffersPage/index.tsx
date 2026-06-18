@@ -412,6 +412,9 @@ export default function OverlappingOffersPage() {
               eventId={selectedEvent.event_id}
               eventName={selectedEvent.event_name}
               eventCategory={selectedEvent.event_category}
+              subEventCategory={selectedEvent.sub_event_category}
+              eventImage={selectedEvent.event_image}
+              eventDescription={selectedEvent.event_description}
               optinWindow={selectedTs?.optin_window}
               optinId={
                 selectedTs?.optin_id ??
@@ -421,8 +424,8 @@ export default function OverlappingOffersPage() {
               }
               supplierId={sid}
               offerDetail={selectedTs?.offer_detail}
-              eventStartTime={selectedEvent.start_time}
-              eventEndTime={selectedEvent.end_time}
+              eventStartTime={selectedEvent.event_start_time || selectedEvent.start_time}
+              eventEndTime={selectedEvent.event_end_time || selectedEvent.end_time}
               slotStartTime={selectedTs.start_time}
               slotEndTime={selectedTs.end_time}
             />
