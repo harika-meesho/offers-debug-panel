@@ -202,7 +202,7 @@ function EventsTable({ groups }: { groups: EventGroup[] }) {
           }}
           sx={{ width: 280 }}
         />
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
           {(['all', 'optin', 'direct'] as TypeFilter[]).map((t) => (
             <Chip
               key={t}
@@ -214,6 +214,9 @@ function EventsTable({ groups }: { groups: EventGroup[] }) {
               sx={{ cursor: 'pointer' }}
             />
           ))}
+          <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+            <strong>Optin</strong>: events with opt-ins &nbsp;·&nbsp; <strong>Direct</strong>: events without opt-ins
+          </Typography>
         </Box>
         {isFiltered && (
           <Typography variant="caption" color="text.secondary">
