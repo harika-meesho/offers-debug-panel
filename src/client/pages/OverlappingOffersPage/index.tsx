@@ -494,7 +494,8 @@ export default function OverlappingOffersPage() {
                       <TableRow
                         key={`${ts.offer_id}|${ts.event_id}|${ts.start_time}`}
                         hover
-                        sx={{ cursor: 'default' }}
+                        sx={{ cursor: 'pointer' }}
+                        onClick={() => navigate(`/event/${ts.event_id}/offer/${ts.offer_id}/overlapping`)}
                       >
                         <TableCell sx={{ color: 'text.secondary', fontSize: '0.85rem', width: 36 }}>
                           {i + 1}
