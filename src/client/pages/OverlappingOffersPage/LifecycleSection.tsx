@@ -16,7 +16,7 @@ import {
   OfferDetail,
 } from '../../types';
 import { getLifecycleA } from '../../services/api';
-import LifecycleBSection from './LifecycleBSection';
+import LifecycleBSection, { deriveLiveState } from './LifecycleBSection';
 import { formatTime } from '../../utils/format';
 import { M, StepState, StepCircle } from '@components/StepCircle';
 import { apiError, parseLifecycleError } from '@utils/apiError';
@@ -196,15 +196,12 @@ function Step3Content({ d }: { d: FileUploadStatus }) {
 function Step5Content({ d, startTime, endTime }: { d: OfferDetail; startTime: number; endTime: number }) {
   const resolvedStart = d.start_time || startTime;
   const resolvedEnd = d.end_time || endTime;
+  const live = deriveLiveState(d, startTime, endTime);
   return (
     <Box>
-      <FieldRow label="Status">
-        <Chip
-          label={d.status}
-          size="small"
-          color={d.status === 'ACTIVE' ? 'success' : d.status === 'DISABLED' ? 'error' : 'default'}
-        />
-      </FieldRow>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+        <Chip label={live.label} color={live.color} size="small" sx={{ fontWeight: 700, fontSize: '0.72rem' }} />
+      </Box>
       <FieldRow label="Time Window">
         <Typography variant="caption" fontFamily="monospace">
           {formatTime(resolvedStart)} → {formatTime(resolvedEnd)}
@@ -351,9 +348,11 @@ export default function LifecycleSection({
 
   function step5State(): StepState {
     if (!offerDetail) return 'pending';
-    if (offerDetail.status === 'ACTIVE') return 'done';
-    if (offerDetail.status === 'DISABLED') return 'error';
-    return 'warn';
+    const s = deriveLiveState(offerDetail, slotStartTime, slotEndTime);
+    if (s.label === 'LIVE') return 'done';
+    if (s.label === 'DISABLED' || s.label === 'EXPIRED') return 'error';
+    if (s.label === 'UPCOMING') return 'warn';
+    return 'pending';
   }
 
   const supplierOptinStatus = lifecycle?.supplier_optin?.opt_in_status?.toLowerCase();

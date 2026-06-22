@@ -92,13 +92,13 @@ function DiscountChips({ data }: { data: Record<string, unknown> }) {
   );
 }
 
-type LiveLabel = 'LIVE' | 'UPCOMING' | 'EXPIRED' | 'NOT ACTIVATED' | 'DISABLED';
+export type LiveLabel = 'LIVE' | 'UPCOMING' | 'EXPIRED' | 'NOT ACTIVATED' | 'DISABLED';
 
-function toSec(ts: number): number {
+export function toSec(ts: number): number {
   return ts > 1e12 ? Math.floor(ts / 1000) : ts;
 }
 
-function deriveLiveState(
+export function deriveLiveState(
   d: OfferDetail,
   slotStart = 0,
   slotEnd = 0,
